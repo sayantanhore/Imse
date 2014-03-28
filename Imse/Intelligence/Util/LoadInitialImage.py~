@@ -1,0 +1,10 @@
+
+
+class LoadInitialImage(object):
+	
+	def __init__(self):
+		
+		
+	def load_images(colors):
+		
+		
