@@ -1,0 +1,177 @@
+from django.core.management.base import BaseCommand, CommandError
+from Intelligence.models import Image
+
+from xml.dom.minidom import parse
+import glob, os, math, copy
+
+import numpy
+import os
+from scipy import spatial
+import math
+import pickle
+
+class Command(BaseCommand) :
+    args = '<number of images>'
+    help = 'build self-organising map'    
+    def handle(self, *args, **options) :
+        if len(args) != 1 :
+            raise CommandError("Kernel command needs a number of images in the dataset")
+        numpy.set_printoptions(edgeitems = 40)
+        images_number = args[0]
+        
+        # For file names
+        kernel_type = 'eh'
+        
+        def SOM(filename):
+            
+            '''#########################################################'''
+            '''##################    Initialisation   ##################'''
+            '''#########################################################'''
+            grid_dimentionality = 2
+            datapoints = numpy.loadtxt(filename)
+            images_number = len(datapoints)
+            grid_nodes_num = int(math.ceil(math.sqrt(math.sqrt(images_number))))
+            clusters_num = grid_nodes_num**grid_dimentionality
+            EPSILON = 0.0001
+            # Number of model vectors 
+            '''##########################################################################'''
+            '''##################    Distances between model vectors   ##################'''
+            '''##########################################################################'''
+            
+            # Store SQUARED distances between vector models
+            grid_distances = numpy.zeros((clusters_num,clusters_num))
+            if grid_dimentionality == 1:
+                model1 = 0
+                for x1 in range(grid_nodes_num):
+                    model2 = 0
+                    for x2 in range(grid_nodes_num):
+                        squared_distance = (x1-x2)**2
+                        grid_distances[model1,model2]=squared_distance
+                        model2 += 1         
+                    model1 += 1
+            if grid_dimentionality == 2:
+                model1 = 0
+                for x1 in range(grid_nodes_num):
+                    for y1 in range(grid_nodes_num):
+                        model2 = 0
+                        for x2 in range(grid_nodes_num):
+                            for y2 in range(grid_nodes_num):
+                                squared_distance = (x1-x2)**2+(y1-y2)**2
+                                grid_distances[model1,model2]=squared_distance
+                                model2 += 1         
+                        model1 += 1         
+            if grid_dimentionality == 3:
+                model1 = 0
+                for x1 in range(grid_nodes_num):
+                    for y1 in range(grid_nodes_num):
+                        for z1 in range(grid_nodes_num):
+                            model2 = 0
+                            for x2 in range(grid_nodes_num):
+                                for y2 in range(grid_nodes_num):
+                                    for z2 in range(grid_nodes_num):
+                                        squared_distance = (x1-x2)**2+(y1-y2)**2+(z1-z2)**2
+                                        grid_distances[model1,model2]=squared_distance
+                                        model2 += 1         
+                            model1 += 1
+               
+            '''-------------------------------- Step 1 --------------------------------------'''            
+            '''##############################################################################'''
+            '''##################    Load data, initialise model vectors   ##################'''
+            '''##############################################################################'''
+            
+            
+            #datapoints_num = datapoints.shape[0]
+            datapoints_dimensionality = datapoints.shape[1]
+            model_vectors = numpy.zeros((clusters_num, datapoints_dimensionality))
+            old_model_vectors = numpy.copy(model_vectors)
+                
+            for dimension in range(datapoints_dimensionality):    
+                maxvalue = numpy.max(datapoints[:,dimension])
+                minvalue = numpy.min(datapoints[:,dimension])
+                vector = numpy.random.uniform(minvalue, maxvalue, clusters_num)
+                model_vectors[:,dimension] = vector.T
+            
+            
+            '''-------------------------------- Step 2 --------------------------------------'''            
+            '''##############################################################################'''
+            '''##################    Assing datapoints to model vectors    ##################'''
+            '''##############################################################################'''
+            def AssignDatapoints():
+                cluster_to_datapoint = dict()
+                distances_datapoints_to_clusters = spatial.distance.cdist(datapoints, model_vectors)
+                datapoint_to_cluster = numpy.argmin(distances_datapoints_to_clusters, axis=1)
+                for cluster in range(clusters_num):
+                    cluster_to_datapoint[cluster] = numpy.where(datapoint_to_cluster==cluster)[0]
+                cluster_approximation = numpy.argmin(distances_datapoints_to_clusters, axis=0)
+                ''' for cluster in cluster_to_datapoint:
+                    print len(cluster_to_datapoint[cluster])'''
+                
+                # If after the assignment some of the clusters became empty
+                for cluster in range(clusters_num):
+                    if len(cluster_to_datapoint[cluster])==0:
+                        #print 'This cluster is empty!'
+                        for dimension in range(datapoints_dimensionality):    
+                            maxvalue = numpy.max(datapoints[:,dimension])
+                            minvalue = numpy.min(datapoints[:,dimension])
+                            vector = numpy.random.uniform(minvalue, maxvalue, 1)
+                            model_vectors[cluster,dimension] = vector.T
+                
+                return datapoint_to_cluster, cluster_to_datapoint, cluster_approximation
+            
+            
+            '''-------------------------------- Step 3 --------------------------------------'''            
+            '''##############################################################################'''
+            '''##################        Recalculated model vectors        ##################'''
+            '''##############################################################################'''
+            # The bigger sigma0, the more dependent clusters at the beginning
+            sigma0 = 5.0
+            # The bigger lambda_time, the slower dependence decreases with time
+            lambda_time = 4.0
+            
+            def AssignModelvectors(cluster_to_datapoint, datapoint_to_clusters, time):
+                old_model_vectors = numpy.copy(model_vectors)
+                sigma = sigma0*math.exp(-time/lambda_time)
+                neighborhood = numpy.exp(-grid_distances/(2.0*(sigma**2)))
+                for cluster in range(clusters_num):
+                    datapoints_weights = neighborhood[cluster,:][datapoint_to_clusters]
+                    model_vectors[cluster,:]=numpy.sum(((datapoints.T*datapoints_weights).T),axis=0)/sum(datapoints_weights)
+                return model_vectors, old_model_vectors
+            
+            '''----------------------------------- Step 0 -----------------------------------------'''            
+            '''####################################################################################'''
+            '''##################        Check if the algorithm converged        ##################'''
+            '''####################################################################################'''
+            def Converged(old_model_vectors, model_vectors):
+                return numpy.linalg.norm(old_model_vectors-model_vectors)/(numpy.linalg.norm(old_model_vectors)+numpy.linalg.norm(model_vectors))
+             
+            '''----------------------------------------------------------------------------'''            
+            '''####################################################################################'''
+            '''##################         Repeat step 0, step 1, step 3          ##################'''
+            '''####################################################################################'''   
+            
+            t = 1
+            while Converged(old_model_vectors, model_vectors)>EPSILON:
+                print Converged(old_model_vectors, model_vectors)
+                print '!'
+                datapoints_to_clusters, clusters_to_datapoints, cluster_approximation = AssignDatapoints()
+                
+                print "Datapoints to clusters :: " + str(datapoints_to_clusters)
+                
+                model_vectors, old_model_vectors = AssignModelvectors(clusters_to_datapoints, datapoints_to_clusters, t)
+                t += 1
+            '''for cluster in cluster_to_datapoint:
+                datapoints_subset = datapoints[cluster_to_datapoint[cluster]]
+                if len(datapoints_subset)>MAX_GP:'''
+            datapoints_to_clusters, clusters_to_datapoints, cluster_approximation = AssignDatapoints()
+            print "Datapoints to clusters :: " + str(datapoints_to_clusters)
+            numpy.save("/data/Imse/Data/model-vectors-" + kernel_type + "-" + str(images_number), model_vectors)
+            #pickle.dump(datapoint_to_cluster, open(filename+'-datapoint-to-clusters', 'w'))  
+            pickle.dump(clusters_to_datapoints, open("/data/Imse/Data/clusters-to-datapoints-" + kernel_type + "-" + str(images_number), "w"))
+            #os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', '..', 'Data/cluster-to-datapoints-rgb', str(images_number))
+            numpy.save("/data/Imse/Data/cluster-approximation-" + kernel_type + "-" + str(images_number), cluster_approximation)
+            return clusters_num
+        
+        #datafile = "/data/Imse/Data/" + kernel_type + "_distance" + str(images_number) + ".npy"
+        datafile = "/data/Imse/Data/" + kernel_type + "" + str(images_number) + ".txt"
+        #datafile = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', '..', 'Data/features-rgb-distance-'+str(images_number)+'.npy'))
+        SOM(datafile)
