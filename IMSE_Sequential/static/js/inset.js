@@ -16,10 +16,10 @@ function createInset(){
             imageBox_width = $("#id_image_container .panel-body .row .col-md-3 a").css("width").replace("px", "") * 60 / 100;
             imageBox_top = $("#id_image_container .panel-body .row .col-md-3").css("top");
             imageBox_left = $("#id_image_container .panel-body .row .col-md-3").css("left");
-            imageBox.css("width", imageBox_width + "px");
-            imageBox.css("height", imageBox_width + "px");
-            imageBox.css("top", imageBox_top + "px");
-            imageBox.css("left", imageBox_left + "px");
+            //imageBox.css("width", imageBox_width + "px");
+            //imageBox.css("height", imageBox_width + "px");
+            //imageBox.css("top", imageBox_top + "px");
+            //imageBox.css("left", imageBox_left + "px");
             imageBox.addClass("thumbnail");
             
             return imageBox;

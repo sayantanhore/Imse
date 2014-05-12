@@ -90,7 +90,7 @@ class GPSOM(object):
         
         if accepted == True:
             self.images_shown.append(self.chosen_image)
-            self.feedback.append(self.pseudo_feedback)
+            #self.feedback.append(self.pseudo_feedback)
             
             # Delete         
         
@@ -100,8 +100,8 @@ class GPSOM(object):
                 del self.clusters[self.chosen_model_vector]
                 index_chosen_model_vector = list(self.clusters_names).index(self.chosen_model_vector + self.images_number)
                 self.clusters_names = numpy.delete(self.clusters_names, index_chosen_model_vector)
-        
-        
+        self.feedback = feedback
+        '''
         if len(self.feedback):
             no_of_pseudo_feedbacks = len(self.feedback) % len(feedback)
             
@@ -112,6 +112,7 @@ class GPSOM(object):
             self.feedback[-len(feedback):] = feedback
         else:
             self.feedback = self.feedback + feedback
+        '''
         print "Feedback Vector :: " + str(len(self.feedback))
         print self.feedback
         datapoints_predict = self.clusters_names
