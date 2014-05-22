@@ -8,7 +8,7 @@ Created on Fri May 16 15:18:06 2014
 import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
-import pycuda.gpuarray as gpuarray
+import pycuda.cumath as cumath
 import scikits.cuda.cublas as cublas
 import numpy as np
 
@@ -18,7 +18,7 @@ import numpy as np
 
 mod = SourceModule("""
 
-__global__ void generate__K__(float *K_gpu, float *shown_gpu, float *feat_gpu, int SHOWN_SIZE, int FEATURE_SIZE)
+__global__ void generate__K__(float *K_gpu, float *shown_gpu, float *feat_gpu, float *K_noise_gpu, int SHOWN_SIZE, int FEATURE_SIZE)
     {
         // Get co-ordinates
         int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -28,18 +28,23 @@ __global__ void generate__K__(float *K_gpu, float *shown_gpu, float *feat_gpu, i
 
         float distance = 0.0;
 
-        //if(x < SHOWN_SIZE && y < SHOWN_SIZE)
-        //{
-            int image_x = shown_gpu[x];
-            int image_y = shown_gpu[y];
+        int image_x = shown_gpu[x];
+        int image_y = shown_gpu[y];
 
-            for (int i = 0; i < FEATURE_SIZE; i++)
-            {
-                distance += abs(feat_gpu[image_x * FEATURE_SIZE + i] - feat_gpu[image_y * FEATURE_SIZE + i]);
-            }
+        for (int i = 0; i < FEATURE_SIZE; i++)
+        {
+            distance += abs(feat_gpu[image_x * FEATURE_SIZE + i] - feat_gpu[image_y * FEATURE_SIZE + i]);
+        }
+        
+        if(x == y)
+        {
+            K_gpu[y * x_counter + x] = distance / FEATURE_SIZE + K_noise_gpu[x];
+        }
+        else
+        {
+            K_gpu[y * x_counter + x] = distance / FEATURE_SIZE;            
+        }
 
-            K_gpu[y * x_counter + x] = distance / FEATURE_SIZE;
-        //}
     }
 __global__ void generate__K_x__(float *K_x_gpu, float *shown_gpu, float *predict_gpu, float *feat_gpu, int BLOCK_SIZE, int PREDICTION_SIZE, int FEATURE_SIZE)
     {
@@ -51,23 +56,21 @@ __global__ void generate__K_x__(float *K_x_gpu, float *shown_gpu, float *predict
 
         float distance = 0.0;
 
-        //if(x < BLOCK_SIZE && y < PREDICTION_SIZE)
-        //{
-            int image_x = shown_gpu[x];
-            int image_y = predict_gpu[y];
+        int image_x = shown_gpu[x];
+        int image_y = predict_gpu[y];
 
-            for (int i = 0; i < FEATURE_SIZE; i++)
-            {
-                distance += abs(feat_gpu[image_x * FEATURE_SIZE + i] - feat_gpu[image_y * FEATURE_SIZE + i]);
-            }
+        for (int i = 0; i < FEATURE_SIZE; i++)
+        {
+            distance += abs(feat_gpu[image_x * FEATURE_SIZE + i] - feat_gpu[image_y * FEATURE_SIZE + i]);
+        }
 
-            K_x_gpu[y * x_counter + x] = distance / FEATURE_SIZE;
-        //}
+        K_x_gpu[y * x_counter + x] = distance / FEATURE_SIZE;
+
     }
-__global__ void generate__diag_K_xx__(float *diag_K_xx_gpu)
+__global__ void generate__diag_K_xx__(float *diag_K_xx_gpu, float *K_xx_noise_gpu)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
-        diag_K_xx_gpu[x] = 0.0;
+        diag_K_xx_gpu[x] = K_xx_noise_gpu[x];
     }
 __global__ void generate__diag_K_xKK_x_T__(float *diag_K_xKK_x_T_gpu, float *K_xK_gpu, float *K_x, int K_xK_gpu_width)
     {
@@ -140,22 +143,37 @@ drv.memcpy_htod(predict_gpu, predict)
 
 
 # K
+#*******************************************************************************************************************************************************************************************************************************
 
 K = np.zeros((no_of_shown_images, no_of_shown_images), dtype = "float32")
 
 K_gpu = drv.mem_alloc(K.nbytes)
+
+K_noise = cumath.np.random.normal(1, 0.1, no_of_shown_images)
+
+K_noise_gpu = drv.mem_alloc(K_noise.nbytes)
+
+drv.memcpy_htod(K_noise_gpu, K_noise)
+
+
 
 func = mod.get_function("generate__K__")
 
 GRID_SIZE_x = (no_of_shown_images + BLOCK_SIZE - 1) / BLOCK_SIZE
 GRID_SIZE_y = (no_of_shown_images + BLOCK_SIZE - 1) / BLOCK_SIZE
 
-func(K_gpu, shown_gpu, feat_gpu, np.int32(no_of_shown_images), np.int32(no_of_features), block = (BLOCK_SIZE, BLOCK_SIZE, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
+func(K_gpu, shown_gpu, feat_gpu, K_noise_gpu, np.int32(no_of_shown_images), np.int32(no_of_features), block = (BLOCK_SIZE, BLOCK_SIZE, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
 
 drv.memcpy_dtoh(K, K_gpu)
 
+#*******************************************************************************************************************************************************************************************************************************
+
+#print "K"
+#print K
+
 # K_x
 #*******************************************************************************************************************************************************************************************************************************
+
 K_x = np.zeros((no_of_total_images, no_of_shown_images), dtype = "float32")
 
 K_x_gpu = drv.mem_alloc(K_x.nbytes)
@@ -171,8 +189,12 @@ drv.memcpy_dtoh(K_x, K_x_gpu)
 
 #*******************************************************************************************************************************************************************************************************************************
 
+#print "K_x"
+#print K_x
+
 # K_x.K
 #*******************************************************************************************************************************************************************************************************************************
+
 h = cublas.cublasCreate()
 
 K_xK = np.zeros((no_of_total_images, no_of_shown_images), dtype = "float32")
@@ -188,28 +210,15 @@ cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, no_of_shown_images, no_of_total_
 drv.memcpy_dtoh(K_xK, K_xK_gpu)
 
 cublas.cublasDestroy(h)
+
 #*******************************************************************************************************************************************************************************************************************************
 
-print "Temp"
-
-print K_xK.shape
-'''
-temp_K = np.matrix(K)
-temp_K_x = np.matrix(K_x)
-
-
-
-temp_K_xK = np.dot(K_x, K)
-
-print np.array_equal(temp_K_xK, K_xK)
-
-print temp_K_xK[:6, :6]
-print "**********************************************************************************************************"
-print K_xK[:6, :6]
-'''
+#print "K_x.K"
+#print K_xK
 
 # diag_K_xx
 #*******************************************************************************************************************************************************************************************************************************
+'''
 diag_K_xx = np.zeros((1, no_of_total_images), dtype = "float32")
 
 diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
@@ -222,9 +231,15 @@ GRID_SIZE_y = (1 + BLOCK_SIZE - 1) / BLOCK_SIZE
 func(diag_K_xx_gpu, block = (BLOCK_SIZE, BLOCK_SIZE, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
 
 drv.memcpy_dtoh(diag_K_xx, diag_K_xx_gpu)
+'''
+
+diag_K_xx = cumath.np.random.normal(1, 0.1, no_of_total_images)
+diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
+
 #*******************************************************************************************************************************************************************************************************************************
 
-print diag_K_xx.shape
+#print "diag_K_xx"
+#print diag_K_xx
 
 # diag_K_xKK_x_T
 #*******************************************************************************************************************************************************************************************************************************
@@ -242,9 +257,8 @@ func(diag_K_xKK_x_T_gpu, K_xK_gpu, K_x_gpu, np.int32(no_of_shown_images), block 
 drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
-print "From GPU"
-print diag_K_xKK_x_T
-
+#print "diag_K_xKK_x_T"
+#print diag_K_xKK_x_T
 
 # variance
 #*******************************************************************************************************************************************************************************************************************************
@@ -262,12 +276,13 @@ func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, block = (BLOCK_SIZE, BLOCK
 drv.memcpy_dtoh(variance, variance_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
+#print "Variance"
+#print variance
+
 # Mean
 #*******************************************************************************************************************************************************************************************************************************
 feedback = np.array(np.random.random(no_of_shown_images))
 feedback = np.array([feedback])
-print "Feedback"
-print feedback
 
 feedback_gpu = drv.mem_alloc(feedback.nbytes)
 drv.memcpy_htod(feedback_gpu, feedback)
@@ -288,6 +303,9 @@ cublas.cublasDestroy(h)
 
 #*******************************************************************************************************************************************************************************************************************************
 
+#print "Mean"
+#print mean
+
 # UCB
 #*******************************************************************************************************************************************************************************************************************************
 ucb = np.zeros((1, no_of_total_images), dtype = "float32")
@@ -301,17 +319,7 @@ func(ucb_gpu, mean_gpu, variance_gpu, block = (BLOCK_SIZE, BLOCK_SIZE, 1), grid 
 drv.memcpy_dtoh(ucb, ucb_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
-
-print "Mean"
-
-print mean
-
-print "Variance"
-
-print variance
-
 print "UCB"
-
 print ucb
 
 
