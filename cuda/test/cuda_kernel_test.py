@@ -15,77 +15,10 @@ import numpy as np
 
 # Kernel
 
+cuda_source = open('../kernels.c', 'r')
+mod = SourceModule(cuda_source.read())
 
-mod = SourceModule("""
-
-__global__ void generate__K__(float *K_gpu, int *shown_gpu, float *feat_gpu, float *K_noise_gpu,
-    int shown_size, int feature_size)
-{
-    // Get co-ordinates
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int z = blockIdx.z * blockDim.z + threadIdx.z;
-
-    if (z > feature_size || y > shown_size || x > shown_size) return;
-
-    atomicAdd(&K_gpu[y * shown_size + x], fabs(feat_gpu[shown_gpu[x] * feature_size + z] -
-        feat_gpu[shown_gpu[y] * feature_size + z]));
-
-    if(x == y) {
-   //     K_gpu[y * shown_size +  x] = K_noise_gpu[x];
-    }
-}
-    
-__global__ void generate__K_x__(float *K_x_gpu, int *shown_gpu, int *predict_gpu, float *feat_gpu,
-    int block_size, int prediction_size, int feature_size)
-{
-    // Get co-ordinates
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-    int x_counter = gridDim.x * blockDim.x;
-
-    float distance = 0.0;
-
-    int image_x = shown_gpu[x];
-    int image_y = predict_gpu[y];
-
-    for (int i = 0; i < feature_size; i++)
-    {
-        distance += fabsf((float)(feat_gpu[image_x * feature_size + i] - feat_gpu[image_y * feature_size + i]));
-    }
-
-    K_x_gpu[y * x_counter + x] = fdividef(distance, feature_size);
-
-}
-__global__ void generate__diag_K_xx__(float *diag_K_xx_gpu, float *K_xx_noise_gpu)
-{
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    diag_K_xx_gpu[x] = K_xx_noise_gpu[x];
-}
-__global__ void generate__diag_K_xKK_x_T__(float *diag_K_xKK_x_T_gpu, float *K_xK_gpu, float *K_x, int K_xK_gpu_width)
-{
-    float result = 0.0;
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (int i = 0; i < K_xK_gpu_width; i++)
-        {
-            result += K_xK_gpu[x * K_xK_gpu_width + i] * K_x[x * K_xK_gpu_width + i];
-        }
-    diag_K_xKK_x_T_gpu[x] = result;
-}
-__global__ void generate__variance__(float *variance_gpu, float *diag_K_xx_gpu, float *diag_K_xKK_x_T_gpu)
-{
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    variance_gpu[x] = sqrtf(diag_K_xx_gpu[x] - diag_K_xKK_x_T_gpu[x]);
-}
-__global__ void generate__UCB__(float *ucb_gpu, float *mean_gpu, float *variance_gpu)
-{
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    ucb_gpu[x] = mean_gpu[x] + variance_gpu[x];
-}
-
-""")
+# Helper functions for testing
 
 def distance(vector1, vector2, metric="manhattan"):
     dist = 0
@@ -98,17 +31,11 @@ def distance(vector1, vector2, metric="manhattan"):
 
 # Declarations
 
-no_of_total_images = 25000
-
+no_of_total_images = 500
 no_of_shown_images = 16
-
 no_of_predictions = no_of_total_images - no_of_shown_images
-
 no_of_features = 512
-
 block_size = 16
-
-
 
 # Reading feature matrix in float32 format
 
@@ -116,42 +43,26 @@ block_size = 16
 feat = np.arange(1, no_of_total_images*no_of_features+1, dtype = "float32")
 feat = feat.reshape((no_of_total_images, no_of_features))
 
-
-print "Features 0"
-
-print feat[0]
-
 # Feature vectors
 #feat_gpu = gpuarray.to_gpu(feat)
 
 feat_gpu = drv.mem_alloc(feat.nbytes)
-
 drv.memcpy_htod(feat_gpu, feat)
-
 
 # Shown image number vector
 
 #shown = np.random.randint(0, 24999, no_of_shown_images)
 shown = np.arange(0, no_of_shown_images, dtype="int32")
-
 print "Shown"
-
 print shown
-
 shown_gpu = drv.mem_alloc(shown.nbytes)
-
 drv.memcpy_htod(shown_gpu, shown)
-
-
 
 # Prediction Set
 
-predict = np.asarray([i for i in range(no_of_total_images)])
-
+predict = np.arange(0, no_of_total_images, dtype="int32")
 predict_gpu = drv.mem_alloc(predict.nbytes)
-
 drv.memcpy_htod(predict_gpu, predict)
-
 
 # K
 #*******************************************************************************************************************************************************************************************************************************
@@ -178,38 +89,39 @@ K_noise_test = K_noise_test * K_noise
 print(feat[0])
 for idx1 in shown:
     for idx2 in shown:
-        K_test[idx1][idx2] += distance(feat[idx1], feat[idx2])
-
+        K_test[idx1][idx2] += distance(feat[idx1], feat[idx2]) / len(feat[0])
 K_test += K_noise_test
 
-
 #*******************************************************************************************************************************************************************************************************************************
+print("K_test == K")
+print(np.all(K_test == K))
 
-print "K"
-print K
-
-print(K_test - K)
-print(distance(feat[0], feat[1]))
 # K_x
 #*******************************************************************************************************************************************************************************************************************************
 
-K_x = np.zeros((no_of_total_images, no_of_shown_images), dtype = "float32")
+K_x = np.zeros((no_of_total_images, no_of_shown_images), dtype="float32")
 
 K_x_gpu = drv.mem_alloc(K_x.nbytes)
+drv.memcpy_htod(K_x_gpu, K_x)
 
 func = mod.get_function("generate__K_x__")
 
 GRID_SIZE_x = (no_of_shown_images + block_size - 1) / block_size
 GRID_SIZE_y = (no_of_total_images + block_size - 1) / block_size
+GRID_SIZE_z = (no_of_features + 4 - 1) / 4
 
-func(K_x_gpu, shown_gpu, predict_gpu, feat_gpu, np.int32(block_size), np.int32(no_of_total_images), np.int32(no_of_features), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
+func(K_x_gpu, shown_gpu, predict_gpu, feat_gpu, np.int32(block_size), np.int32(no_of_total_images), np.int32(no_of_features), block = (block_size, block_size, 4), grid = (GRID_SIZE_x, GRID_SIZE_y, GRID_SIZE_z))
 
 drv.memcpy_dtoh(K_x, K_x_gpu)
 
-#*******************************************************************************************************************************************************************************************************************************
+K_x_test = np.zeros((no_of_total_images, no_of_shown_images), dtype="float32")
+for idx1 in predict:
+    for idx2 in shown:
+        K_x_test[idx1][idx2] += distance(feat[idx1], feat[idx2]) / len(feat[0])
 
-#print "K_x"
-#print K_x
+#*******************************************************************************************************************************************************************************************************************************
+print("K_x == K_x_test")
+print(np.all(K_x == K_x_test))
 
 # K_inv
 #*******************************************************************************************************************************************************************************************************************************
@@ -353,8 +265,8 @@ func(ucb_gpu, mean_gpu, variance_gpu, block = (block_size, block_size, 1), grid 
 drv.memcpy_dtoh(ucb, ucb_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
-print "UCB"
-print ucb
+#print "UCB"
+#print ucb
 
 
 # Free all memory
