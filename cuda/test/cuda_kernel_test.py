@@ -31,7 +31,7 @@ def distance(vector1, vector2, metric="manhattan"):
 
 # Declarations
 
-no_of_total_images = 500
+no_of_total_images = 32
 no_of_shown_images = 16
 no_of_predictions = no_of_total_images - no_of_shown_images
 no_of_features = 512
@@ -134,8 +134,10 @@ K_inv_gpu = drv.mem_alloc(K_inv.nbytes)
 
 drv.memcpy_htod(K_inv_gpu, K_inv)
 
+K_inv_test = np.linalg.inv(K)
 #*******************************************************************************************************************************************************************************************************************************
-
+print("K_inv == K_inv_test")
+print(np.all(K_inv == K_inv_test))
 
 # K_x.K
 #*******************************************************************************************************************************************************************************************************************************
@@ -143,7 +145,6 @@ drv.memcpy_htod(K_inv_gpu, K_inv)
 h = cublas.cublasCreate()
 
 K_xK = np.zeros((no_of_total_images, no_of_shown_images), dtype = "float32")
-
 K_xK_gpu = drv.mem_alloc(K_xK.nbytes)
 
 CUBLAS_OP_N = 0
@@ -156,10 +157,13 @@ drv.memcpy_dtoh(K_xK, K_xK_gpu)
 
 cublas.cublasDestroy(h)
 
+K_xK_test = np.matrix(K_x) * np.matrix(K_inv)
 #*******************************************************************************************************************************************************************************************************************************
+print("np.allclose(K_xK, K_xK_test, rtol=1e-05, atol=5e-06)")
+print(np.allclose(K_xK, K_xK_test, rtol=1e-05, atol=5e-06))
 
-#print "K_x.K"
-#print K_xK
+# The difference between numpy-calculated and GPU seems quite large.
+
 
 # diag_K_xx
 #*******************************************************************************************************************************************************************************************************************************
@@ -178,7 +182,8 @@ func(diag_K_xx_gpu, block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GR
 drv.memcpy_dtoh(diag_K_xx, diag_K_xx_gpu)
 '''
 
-diag_K_xx = cumath.np.random.normal(1, 0.1, no_of_total_images)
+#diag_K_xx = cumath.np.random.normal(1, 0.1, no_of_total_images)
+diag_K_xx = cumath.np.arange(1, no_of_total_images)
 diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
 
 #*******************************************************************************************************************************************************************************************************************************
@@ -189,21 +194,27 @@ diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
 # diag_K_xKK_x_T
 #*******************************************************************************************************************************************************************************************************************************
 
-diag_K_xKK_x_T = np.zeros((1, no_of_total_images), dtype = "float32")
-
-diag_K_xKK_x_T_gpu = drv.mem_alloc(diag_K_xKK_x_T.nbytes) 
+diag_K_xKK_x_T = np.zeros((1, no_of_total_images), dtype="float32")
+diag_K_xKK_x_T_gpu = drv.mem_alloc(diag_K_xKK_x_T.nbytes)
+drv.memcpy_htod(diag_K_xKK_x_T_gpu, diag_K_xKK_x_T)
 func = mod.get_function("generate__diag_K_xKK_x_T__")
-
 GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
 GRID_SIZE_y = (1 + block_size - 1) / block_size
-
 func(diag_K_xKK_x_T_gpu, K_xK_gpu, K_x_gpu, np.int32(no_of_shown_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-
 drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
+
+diag_K_xKK_x_T_test = [0 for i in range(no_of_total_images)]
+for i in range(no_of_total_images):
+    for j in range(np.size(K_xK_test, 1)):
+        diag_K_xKK_x_T_test[i] += K_xK[i, j] * K_x[i, j]
+
 #*******************************************************************************************************************************************************************************************************************************
 
-#print "diag_K_xKK_x_T"
-#print diag_K_xKK_x_T
+print("diag_K_xKK_x_T - diag_K_xKK_x_T_test")
+print(np.size(K_xK_test, 0), np.size(K_xK_test, 1))
+print(diag_K_xKK_x_T)
+print(np.matrix(diag_K_xKK_x_T_test))
+print(diag_K_xKK_x_T - np.matrix(diag_K_xKK_x_T_test))
 
 # variance
 #*******************************************************************************************************************************************************************************************************************************
