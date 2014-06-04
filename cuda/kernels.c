@@ -36,17 +36,19 @@ __global__ void generate__diag_K_xx__(float *diag_K_xx_gpu, float *K_xx_noise_gp
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     diag_K_xx_gpu[x] = K_xx_noise_gpu[x];
 }
-__global__ void generate__diag_K_xKK_x_T__(float *diag_K_xKK_x_T_gpu, float *K_xK_gpu, float *K_x, int K_xK_gpu_width)
+
+__global__ void matMulDiag(float *A, float *B, float *C, int numRows, int numCols)
+// Slow, fix if the speed of this operation becomes an issue
 {
     float result = 0.0;
     int x = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (int i = 0; i < K_xK_gpu_width; i++)
-        {
-            result += K_xK_gpu[x * K_xK_gpu_width + i] * K_x[x * K_xK_gpu_width + i];
-        }
-    diag_K_xKK_x_T_gpu[x] = result;
+    if (x > numRows) return;
+    for (int i = 0; i < numCols; ++i) {
+        result += A[x * numCols + i] * B[x * numCols + i];
+    }
+    C[x] = result;
 }
+
 __global__ void generate__variance__(float *variance_gpu, float *diag_K_xx_gpu, float *diag_K_xKK_x_T_gpu)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;

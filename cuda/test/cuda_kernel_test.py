@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Created on Fri May 16 15:18:06 2014
@@ -31,7 +32,7 @@ def distance(vector1, vector2, metric="manhattan"):
 
 # Declarations
 
-no_of_total_images = 32
+no_of_total_images = 512
 no_of_shown_images = 16
 no_of_predictions = no_of_total_images - no_of_shown_images
 no_of_features = 512
@@ -162,8 +163,6 @@ K_xK_test = np.matrix(K_x) * np.matrix(K_inv)
 print("np.allclose(K_xK, K_xK_test, rtol=1e-05, atol=5e-06)")
 print(np.allclose(K_xK, K_xK_test, rtol=1e-05, atol=5e-06))
 
-# The difference between numpy-calculated and GPU seems quite large.
-
 
 # diag_K_xx
 #*******************************************************************************************************************************************************************************************************************************
@@ -197,10 +196,10 @@ diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
 diag_K_xKK_x_T = np.zeros((1, no_of_total_images), dtype="float32")
 diag_K_xKK_x_T_gpu = drv.mem_alloc(diag_K_xKK_x_T.nbytes)
 drv.memcpy_htod(diag_K_xKK_x_T_gpu, diag_K_xKK_x_T)
-func = mod.get_function("generate__diag_K_xKK_x_T__")
+func = mod.get_function("matMulDiag")
 GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
 GRID_SIZE_y = (1 + block_size - 1) / block_size
-func(diag_K_xKK_x_T_gpu, K_xK_gpu, K_x_gpu, np.int32(no_of_shown_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
+func(K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu, np.int32(no_of_total_images), np.int32(no_of_shown_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
 drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
 
 diag_K_xKK_x_T_test = [0 for i in range(no_of_total_images)]
@@ -212,9 +211,8 @@ for i in range(no_of_total_images):
 
 print("diag_K_xKK_x_T - diag_K_xKK_x_T_test")
 print(np.size(K_xK_test, 0), np.size(K_xK_test, 1))
-print(diag_K_xKK_x_T)
-print(np.matrix(diag_K_xKK_x_T_test))
-print(diag_K_xKK_x_T - np.matrix(diag_K_xKK_x_T_test))
+for i in range(len(diag_K_xKK_x_T_test)):
+    print(diag_K_xKK_x_T_test[i], diag_K_xKK_x_T.flatten()[i], (diag_K_xKK_x_T_test[i] - diag_K_xKK_x_T.flatten()[i]))
 
 # variance
 #*******************************************************************************************************************************************************************************************************************************
@@ -285,24 +283,13 @@ drv.memcpy_dtoh(ucb, ucb_gpu)
 #feat_gpu.gpudata.free()
 
 feat_gpu.free()
-
 shown_gpu.free()
-
 K_noise_gpu.free()
-
 K_gpu.free()
-
 K_x_gpu.free()
-
 K_xK_gpu.free()
-
 diag_K_xx_gpu.free()
-
 diag_K_xKK_x_T_gpu.free()
-
 variance_gpu.free()
-
 mean_gpu.free()
-
 ucb_gpu.free()
-
