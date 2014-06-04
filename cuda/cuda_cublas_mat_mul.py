@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Created on Fri May 16 15:18:06 2014
@@ -12,6 +13,7 @@ import pycuda.cumath as cumath
 import scikits.cuda.cublas as cublas
 import numpy as np
 
+np.set_printoptions(threshold=512, linewidth=2000)
 
 # Kernel
 
@@ -35,27 +37,15 @@ block_size = 16
 
 
 # Reading feature matrix in float32 format
-
-# feat = np.asfarray(np.load("../data/cl25000.npy"), dtype = "float32")
-feat = np.arange(1, no_of_total_images*no_of_features+1, dtype = "float32")
-feat = feat.reshape((no_of_total_images, no_of_features))
-
-
-print "Features 0"
-
-print feat[0]
+feat = np.asfarray(np.load("../data/cl25000.npy"), dtype = "float32")
 
 # Feature vectors
 #feat_gpu = gpuarray.to_gpu(feat)
-
 feat_gpu = drv.mem_alloc(feat.nbytes)
-
 drv.memcpy_htod(feat_gpu, feat)
 
-
 # Shown image number vector
-
-#shown = np.random.randint(0, 24999, no_of_shown_images)
+shown = np.random.choice(no_of_total_images, no_of_shown_images)
 shown = np.arange(0, no_of_shown_images, dtype="int32")
 
 print "Shown"
@@ -175,20 +165,6 @@ cublas.cublasDestroy(h)
 
 # diag_K_xx
 #*******************************************************************************************************************************************************************************************************************************
-'''
-diag_K_xx = np.zeros((1, no_of_total_images), dtype = "float32")
-
-diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
-
-func = mod.get_function("generate__diag_K_xx__")
-
-GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
-GRID_SIZE_y = (1 + block_size - 1) / block_size
-
-func(diag_K_xx_gpu, block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-
-drv.memcpy_dtoh(diag_K_xx, diag_K_xx_gpu)
-'''
 
 diag_K_xx = cumath.np.random.normal(1, 0.1, no_of_total_images)
 diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
@@ -204,13 +180,10 @@ diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
 diag_K_xKK_x_T = np.zeros((1, no_of_total_images), dtype = "float32")
 
 diag_K_xKK_x_T_gpu = drv.mem_alloc(diag_K_xKK_x_T.nbytes) 
-func = mod.get_function("generate__diag_K_xKK_x_T__")
-
+func = mod.get_function("matMulDiag")
 GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
 GRID_SIZE_y = (1 + block_size - 1) / block_size
-
-func(diag_K_xKK_x_T_gpu, K_xK_gpu, K_x_gpu, np.int32(no_of_shown_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-
+func(K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu, np.int32(no_of_total_images), np.int32(no_of_shown_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
 drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
@@ -228,41 +201,46 @@ func = mod.get_function("generate__variance__")
 GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
 GRID_SIZE_y = (1 + block_size - 1) / block_size
 
-func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
+func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, np.int32(no_of_total_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
 
 drv.memcpy_dtoh(variance, variance_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
-#print "Variance"
-#print variance
+print("Variance")
+print(variance)
 
 # Mean
 #*******************************************************************************************************************************************************************************************************************************
 feedback = np.array(np.random.random(no_of_shown_images))
-feedback = np.array([feedback])
-
+feedback = np.array([feedback], dtype='float32')
+feedback = np.matrix(feedback).T
+print("Feedback")
+print(feedback)
+print("K_xK")
+print(K_xK)
+print(np.matrix(K_xK) * np.matrix(feedback))
 
 feedback_gpu = drv.mem_alloc(feedback.nbytes)
 drv.memcpy_htod(feedback_gpu, feedback)
-h = cublas.cublasCreate()
+handle = cublas.cublasCreate()
 
 mean = np.zeros((1, no_of_total_images), dtype = "float32")
 mean_gpu = drv.mem_alloc(mean.nbytes)
 
-CUBLAS_OP_N = 0
-alpha = 1.0
-beta = 0.0
+CUBLAS_OP_N = np.int32(0)
+alpha = np.float32(1.0)
+beta = np.float32(0.0)
 
-cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, no_of_total_images, no_of_shown_images, alpha, feedback_gpu, 1, K_xK_gpu, no_of_shown_images, beta, mean_gpu, 1)
+cublas.cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, np.int32(1), np.int32(no_of_total_images), np.int32(no_of_shown_images), alpha, feedback_gpu, np.int32(1), K_xK_gpu, no_of_shown_images, beta, mean_gpu, np.int32(1))
 
 drv.memcpy_dtoh(mean, mean_gpu)
 
-cublas.cublasDestroy(h)
+cublas.cublasDestroy(handle)
 
 #*******************************************************************************************************************************************************************************************************************************
 
-#print "Mean"
-#print mean
+print("Mean")
+print(mean)
 
 # UCB
 #*******************************************************************************************************************************************************************************************************************************

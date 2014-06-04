@@ -165,24 +165,8 @@ print(np.allclose(K_xK, K_xK_test, rtol=1e-05, atol=5e-06))
 
 
 # diag_K_xx
-#*******************************************************************************************************************************************************************************************************************************
-'''
-diag_K_xx = np.zeros((1, no_of_total_images), dtype = "float32")
 
-diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
-
-func = mod.get_function("generate__diag_K_xx__")
-
-GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
-GRID_SIZE_y = (1 + block_size - 1) / block_size
-
-func(diag_K_xx_gpu, block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-
-drv.memcpy_dtoh(diag_K_xx, diag_K_xx_gpu)
-'''
-
-#diag_K_xx = cumath.np.random.normal(1, 0.1, no_of_total_images)
-diag_K_xx = cumath.np.arange(1, no_of_total_images)
+diag_K_xx = cumath.np.random.normal(1, 0.1, no_of_total_images)
 diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
 
 #*******************************************************************************************************************************************************************************************************************************
@@ -225,13 +209,13 @@ func = mod.get_function("generate__variance__")
 GRID_SIZE_x = (no_of_total_images + block_size - 1) / block_size
 GRID_SIZE_y = (1 + block_size - 1) / block_size
 
-func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
+func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, np.int32(no_of_total_images), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
 
 drv.memcpy_dtoh(variance, variance_gpu)
 #*******************************************************************************************************************************************************************************************************************************
 
-#print "Variance"
-#print variance
+print("Variance")
+print(variance)
 
 # Mean
 #*******************************************************************************************************************************************************************************************************************************
@@ -258,8 +242,8 @@ cublas.cublasDestroy(h)
 
 #*******************************************************************************************************************************************************************************************************************************
 
-#print "Mean"
-#print mean
+print("Mean")
+print(mean)
 
 # UCB
 #*******************************************************************************************************************************************************************************************************************************
