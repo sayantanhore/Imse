@@ -2,7 +2,7 @@
 """
 Created on Wed Jun  4 21:30:41 2014
 
-@author: hore
+@author: sayantan, lasse
 """
 
 import pycuda.driver as drv
