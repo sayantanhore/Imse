@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jun  4 21:30:41 2014
@@ -15,12 +16,12 @@ import scipy.spatial.distance as dist
 
 # Load Kernel
 
-cuda_source = open('kernels.c', 'r')
+cuda_source = open('../kernels.c', 'r')
 mod = SourceModule(cuda_source.read())
 
 # Declarations
 
-no_of_total_images = 25000
+no_of_total_images = 1024
 no_of_shown_images = 16
 no_of_predictions = no_of_total_images - no_of_shown_images
 no_of_features = 512
@@ -29,7 +30,7 @@ block_size = 16
 
 # Reading feature matrix in float32 format
 
-feat = np.asfarray(np.load("/home/IMSE/data/Data/cl25000.npy"), dtype = "float32")
+feat = np.asfarray(np.load("../../data/cl25000.npy"), dtype = "float32")
 feat_gpu = drv.mem_alloc(feat.nbytes)
 drv.memcpy_htod(feat_gpu, feat)
 
