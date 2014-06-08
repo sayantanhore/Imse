@@ -14,59 +14,47 @@ import scikits.cuda.cublas as cublas
 import numpy as np
 import scipy.spatial.distance as dist
 
-
-
 class GaussianProcessGPU:
-    def __init__(self):
-        self.BLOCK_SIZE = 16
-        n_features = 512
+    def __init__(self, img_features, block_size=16):
+        self.block_size = block_size
+        self.n_features = np.size(img_features, 1)
+        # Add zero row to the beginning of feature matrix for zero padding in cuda operations
+        self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype="float32")
 
         cuda_source = open('../kernels.c', 'r')
-        mod = SourceModule(cuda_source.read())
+        self.cuda_module = SourceModule(cuda_source.read())
 
-        # Declarations
+        #self.n_total_img = np.size(self.img_features, 0) TODO: change these to use proper values after refactoring
+        self.n_total_img = 1024
+        self.n_shown_img = 4
+        self.n_predict = self.n_total_img - self.n_shown_img
 
-        n_total_img = 1024
-        n_shown_img = 4
-        n_predict = n_total_img - n_shown_img
+        self.feat_gpu = drv.mem_alloc(self.img_features.nbytes)
+        drv.memcpy_htod(self.feat_gpu, self.img_features)
 
-        block_size = 16
-
-
-        # Reading feature matrix in float32 format
-        # Add zero row in the beginning for padding in matrix operations
-
-        feat = np.asfarray(np.vstack(([np.zeros(n_features)], np.load("../../data/cl25000.npy"))), dtype="float32")
-        feat_gpu = drv.mem_alloc(feat.nbytes)
-        drv.memcpy_htod(feat_gpu, feat)
+        # TODO: change to use proper values after refactoring
+        self.predict = np.arange(0, self.n_total_img, dtype="int32")
+        self.predict_gpu = drv.mem_alloc(self.predict.nbytes)
+        drv.memcpy_htod(self.predict_gpu, self.predict)
 
 
-        predict = np.arange(0, n_total_img, dtype="int32")
-        predict_gpu = drv.mem_alloc(predict.nbytes)
-        drv.memcpy_htod(predict_gpu, predict)
-
-
+    def gaussianProcess(self):
         # K
         #*******************************************************************************************************************************************************************************************************************************
 
-        shown = np.arange(1, n_shown_img + 1, dtype="int32")
+        shown = np.arange(1, self.n_shown_img + 1, dtype="int32")
         shown = np.asarray(shown, dtype="int32")
-        K, K_noise = self.calc_K(n_shown_img, shown, feat_gpu, n_features, output=True)
+        K, K_noise = self.calc_K(self.n_shown_img, shown, self.feat_gpu, self.n_features, output=True)
         print("K")
         print(K)
 
-        #*******************************************************************************************************************************************************************************************************************************
-
-        #print "K"
-        #print K
-
-        feat_test = feat[shown, :]
-        K_test = dist.cdist(feat_test, feat_test, 'cityblock') / n_features + np.diag(K_noise)
-
-        #print "K_test"
-        #print K_test
+        feat_test = np.asfarray([self.img_features[i] for i in shown])
+        K_test = dist.cdist(feat_test, feat_test, 'cityblock') / self.n_features + np.diag(K_noise)
+        print("K_test")
+        print(np.allclose(K, K_test))
 
 
+    def moo(self):
 
         # K_x
         #*******************************************************************************************************************************************************************************************************************************
@@ -263,7 +251,7 @@ class GaussianProcessGPU:
 
 
 
-    def calc_K(n_shown, shown_idxs, feat_gpu, n_features, cleanup=False, output=False):
+    def calc_K(self, n_shown, shown_idxs, feat_gpu, n_features, cleanup=False, output=False):
         """
         """
         # TODO: Might be simpler to simply change block size to match on small n_shown (must work with other kernels though)
@@ -295,7 +283,7 @@ class GaussianProcessGPU:
         grid_size_xy = (n_shown_padded + block_size[0] - 1) / block_size[0]
         grid_size_z = (n_features + block_size[2] - 1) / block_size[2]
         grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
-        func = mod.get_function("generate__K__")
+        func = self.cuda_module.get_function("generate__K__")
         func(K_gpu, shown_idxs_gpu, feat_gpu, K_noise_gpu, np.int32(n_shown_padded), np.int32(n_features),
              block=block_size, grid=grid_size)
 
@@ -311,3 +299,9 @@ class GaussianProcessGPU:
             print(np.size(K_padded, 0), np.size(K_padded, 1))
             print(K_padded)
             return (K, K_noise)
+
+if __name__ == "__main__":
+    # Load image features
+    feat = np.asfarray(np.load("../../data/cl25000.npy"), dtype="float32")
+    gaussianProcess = GaussianProcessGPU(feat)
+    gaussianProcess.gaussianProcess()
