@@ -15,62 +15,63 @@ import numpy as np
 import scipy.spatial.distance as dist
 
 class GaussianProcessGPU:
-    def __init__(self, img_features, block_size=16):
+    def __init__(self, img_features, img_shown_idx, block_size=(16, 16, 4)):
         self.block_size = block_size
-        self.n_features = np.size(img_features, 1)
+        self.n_features = np.size(img_features, 1) # Assuming the n_features is divisible by block_size[2]
         # Add zero row to the beginning of feature matrix for zero padding in cuda operations
         self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype="float32")
+        self.img_shown_idx = np.asarray(img_shown_idx, dtype="int32")
+        
 
         cuda_source = open('../kernels.c', 'r')
         self.cuda_module = SourceModule(cuda_source.read())
 
-        #self.n_total_img = np.size(self.img_features, 0) TODO: change these to use proper values after refactoring
-        self.n_total_img = 1024
-        self.n_shown_img = 4
-        self.n_predict = self.n_total_img - self.n_shown_img
+        #self.n_total = np.size(self.img_features, 0) TODO: change these to use proper values after refactoring
+        #self.n_shown = np.size(self.img_shown_idx, 0)
+        self.n_total = 1024
+        self.n_total_padded = self.round_to_blocksize(self.n_total)
+        self.n_shown = 4
+        self.n_shown_padded = self.round_to_blocksize(self.n_shown)
 
+        self.n_predict = self.n_total - self.n_shown
+
+        # Allocate GPU memory and copy data
         self.feat_gpu = drv.mem_alloc(self.img_features.nbytes)
         drv.memcpy_htod(self.feat_gpu, self.img_features)
+        self.shown_idx_padded = np.asarray(np.concatenate((self.img_shown_idx, np.zeros(self.n_shown_padded - n_shown))), dtype="int32")
+        self.shown_idx_gpu = drv.mem_alloc(self.shown_idx_padded.nbytes)
+        drv.memcpy_htod(self.shown_idx_gpu, self.img_shown_idx)
 
         # TODO: change to use proper values after refactoring
-        self.predict = np.arange(0, self.n_total_img, dtype="int32")
+        self.predict = np.arange(0, self.n_total, dtype="int32")
         self.predict_gpu = drv.mem_alloc(self.predict.nbytes)
         drv.memcpy_htod(self.predict_gpu, self.predict)
 
+    def round_to_blocksize(self, num):
+        return num + (self.block_size[0] - (num % self.block_size[0]))
 
-    def gaussianProcess(self):
+
+    def gaussian_process(self, debug=False):
         # K
         #*******************************************************************************************************************************************************************************************************************************
-
-        shown = np.arange(1, self.n_shown_img + 1, dtype="int32")
+        shown = np.arange(1, self.n_shown + 1, dtype="int32") #TODO: change to work properly after refactoring
         shown = np.asarray(shown, dtype="int32")
-        K, K_noise = self.calc_K(self.n_shown_img, shown, self.feat_gpu, self.n_features, output=True)
-        print("K")
-        print(K)
+        K, K_noise = self.calc_K(self.n_shown, shown, self.feat_gpu, self.n_features, output=True)
+        if debug:
+            print("K")
+            print(K)
 
         feat_test = np.asfarray([self.img_features[i] for i in shown])
         K_test = dist.cdist(feat_test, feat_test, 'cityblock') / self.n_features + np.diag(K_noise)
-        print("K_test")
-        print(np.allclose(K, K_test))
+        if debug:
+            print("K_test")
+            print(np.allclose(K, K_test))
+
+
 
 
     def moo(self):
 
-        # K_x
-        #*******************************************************************************************************************************************************************************************************************************
-
-        K_x = np.zeros((n_total_img, n_shown_img), dtype="float32")
-        K_x_gpu = drv.mem_alloc(K_x.nbytes)
-        drv.memcpy_htod(K_x_gpu, K_x)
-
-        GRID_SIZE_x = (n_shown_img + block_size - 1) / block_size
-        GRID_SIZE_y = (n_total_img + block_size - 1) / block_size
-        GRID_SIZE_z = (n_features + 4 - 1) / 4
-
-        func = mod.get_function("generate__K_x__")
-        func(K_x_gpu, shown_gpu, predict_gpu, feat_gpu, np.int32(block_size), np.int32(n_total_img), np.int32(n_features), block = (block_size, block_size, 4), grid = (GRID_SIZE_x, GRID_SIZE_y, GRID_SIZE_z))
-
-        drv.memcpy_dtoh(K_x, K_x_gpu)
         #*******************************************************************************************************************************************************************************************************************************
 
         #print "K_x"
@@ -259,12 +260,11 @@ class GaussianProcessGPU:
 
         # If len(shown_idxs) is not a multiple of block_size[0], pad it with zeros
         # Set n_shown_padded to match the new length
-        block_size = (16, 16, 4)
-        n_shown_padded = n_shown
-        if n_shown % block_size[0] != 0:
-            n_shown_padded = n_shown + (block_size[0] - (n_shown % block_size[0]))
+        grid_size_xy = (self.n_shown_padded + self.block_size[0] - 1) / self.block_size[0]
+        grid_size_z = (n_features + self.block_size[2] - 1) / self.block_size[2]
+        grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
+
         K_padded = np.zeros((n_shown_padded, n_shown_padded), dtype="float32")
-        shown_idxs_padded = np.asarray(np.concatenate((shown_idxs, np.zeros(n_shown_padded - n_shown))), dtype="int32")
 
         # Allocate memory and transfer
         # TODO: There is probably a better way to initialize zeroed memory on GPU for K_gpu
@@ -280,9 +280,6 @@ class GaussianProcessGPU:
         K_noise_gpu = drv.mem_alloc(K_noise_padded.nbytes)
         drv.memcpy_htod(K_noise_gpu, K_noise_padded)
 
-        grid_size_xy = (n_shown_padded + block_size[0] - 1) / block_size[0]
-        grid_size_z = (n_features + block_size[2] - 1) / block_size[2]
-        grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
         func = self.cuda_module.get_function("generate__K__")
         func(K_gpu, shown_idxs_gpu, feat_gpu, K_noise_gpu, np.int32(n_shown_padded), np.int32(n_features),
              block=block_size, grid=grid_size)
@@ -300,8 +297,31 @@ class GaussianProcessGPU:
             print(K_padded)
             return (K, K_noise)
 
+    def calc_Kx(self, n_shown, shown_gpu, feat_gpu, n_features, n_total_img, cleanup=False, output=False):
+        block_size = (16, 16, 4)
+        grid_size_xy = (n_shown + block_size[0] - 1) / block_size[0]
+        grid_size_z = (n_features + 4 - 1) / 4
+
+        n_shown_padded = n_shown
+        if n_shown % block_size[0] != 0:
+            n_shown_padded = n_shown + (block_size[0] - (n_shown % block_size[0]))
+        n_total_padded = n_total_img
+        if n_total_img % block_size[0] != 0:
+            n_total_padded = n_total_img + (block_size[0] - (n_shown % block_size[0]))
+
+        K_x = np.zeros((n_total_padded, n_shown_padded), dtype="float32")
+        K_x_gpu = drv.mem_alloc(K_x.nbytes)
+        drv.memcpy_htod(K_x_gpu, K_x)
+
+
+        func = self.cuda_module.get_function("generate__K_x__")
+        func(K_x_gpu, shown_gpu, predict_gpu, feat_gpu, np.int32(block_size), np.int32(n_total_img), np.int32(n_features), block = (block_size, block_size, 4), grid = (GRID_SIZE_x, GRID_SIZE_y, GRID_SIZE_z))
+
+        drv.memcpy_dtoh(K_x, K_x_gpu)
+
+
 if __name__ == "__main__":
     # Load image features
     feat = np.asfarray(np.load("../../data/cl25000.npy"), dtype="float32")
     gaussianProcess = GaussianProcessGPU(feat)
-    gaussianProcess.gaussianProcess()
+    gaussianProcess.gaussian_process(debug=True)
