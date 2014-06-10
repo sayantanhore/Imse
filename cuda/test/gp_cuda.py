@@ -35,17 +35,18 @@ class GaussianProcessGPU:
         self.shown_idx = np.asarray(img_shown_idx, dtype=self.int_type)
         #self.n_total = np.size(self.img_features, 0) TODO: change these to use proper values after refactoring
         #self.n_shown = np.size(self.img_shown_idx, 0)
-        self.n_total = self.int_type(20)
-        self.n_total_padded = self.round_to_blocksize(self.n_total)  # Pad to match block size
+        self.n_total = self.int_type(16)
+        self.n_total_padded = self.round_up_to_blocksize(self.n_total)  # Pad to match block size
         self.n_shown = self.int_type(4)
-        self.n_shown_padded = self.round_to_blocksize(self.n_shown)  # Pad to match block size
+        self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)  # Pad to match block size
         self.n_predict = self.int_type(self.n_total - self.n_shown)
+        self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
         self.shown_idx = np.asarray(
             np.concatenate((self.shown_idx, np.zeros(self.n_shown_padded - self.n_shown))),
             dtype=self.int_type)
-        self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
+        self.predict_idx = np.arange(0, self.n_predict_padded, dtype=self.int_type)
         self.K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
-        self.K_x = np.zeros((self.n_shown_padded, self.n_predict), dtype=self.float_type)
+        self.K_x = np.zeros((self.n_shown_padded, self.n_predict_padded), dtype=self.float_type)
         self.K_noise = cumath.np.random.normal(1, 0.1, self.n_shown)  # Generate diagonal noise
         self.K_noise = np.asfarray(
             np.concatenate((self.K_noise, np.zeros(self.n_shown_padded - self.n_shown))),
@@ -79,7 +80,7 @@ class GaussianProcessGPU:
         self.predict_idx_gpu = drv.mem_alloc(self.predict_idx.nbytes)
         drv.memcpy_htod(self.predict_idx_gpu, self.predict_idx)
 
-    def round_to_blocksize(self, num):
+    def round_up_to_blocksize(self, num):
         if num % self.block_size[0] != 0:
             return num + (self.block_size[0] - (num % self.block_size[0]))
         return self.int_type(num)
@@ -97,18 +98,21 @@ class GaussianProcessGPU:
             print(np.allclose(self.K, K_test))
 
         K_x_test_features = np.asfarray([self.img_features[i] for i in self.predict_idx], dtype=self.float_type)
-        self.calc_Kx()
+        self.calc_K_x()
         if debug:
             drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
             print("Kx")
-            print(self.K_x)
-            Kx_test = dist.cdist(K_test_features, K_x_test_features, 'cityblock') / self.n_features
-            Kx_test = np.asfarray(Kx_test, dtype="float32")
-            diff =  np.matrix(Kx_test) - np.matrix(Kx[:, :4])
+            print(self.K_x[:, :4])
+            print(self.predict_idx)
+            K_x_test = dist.cdist(K_test_features, K_x_test_features, 'cityblock')
+            K_x_test = np.asfarray(K_x_test, dtype="float32")
+            print("K_x_test")
+            print(K_x_test[:, :4])
+            diff = np.matrix(K_x_test[:, :4]) - np.matrix(self.K_x[:, :4])
+            print(diff)
             #for line in Kx.tolist():
             #    print(line)
-            #TODO: something wrong with either test or the gpu calculation
-
+            #TODO: something wrong with the test
     def moo(self):
 
         #print "K_x"
@@ -292,7 +296,7 @@ class GaussianProcessGPU:
         cuda_func(self.K_gpu, self.shown_idx_gpu, self.feat_gpu, self.K_noise_gpu, np.int32(self.n_shown_padded),
                   np.int32(self.n_features), block=self.block_size, grid=grid_size)
 
-    def calc_Kx(self):
+    def calc_K_x(self):
         # Variable type checking
 
         grid_size_xy = (self.n_shown_padded + self.block_size[0] - 1) / self.block_size[0]
@@ -301,7 +305,7 @@ class GaussianProcessGPU:
 
         cuda_func = self.cuda_module.get_function("generate__K_x__")
         cuda_func(self.K_x_gpu, self.shown_idx_gpu, self.predict_idx_gpu, self.feat_gpu, np.int32(self.n_shown_padded),
-             np.int32(self.n_predict), np.int32(self.n_features), block=self.block_size, grid=grid_size)
+             np.int32(self.n_predict_padded), np.int32(self.n_features), block=self.block_size, grid=grid_size)
 
 
 if __name__ == "__main__":
