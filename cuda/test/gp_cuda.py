@@ -14,6 +14,15 @@ import scikits.cuda.cublas as cublas
 import numpy as np
 import scipy.spatial.distance as dist
 
+def distance(vector1, vector2, metric="manhattan"):
+    vdist = 0
+    if metric == "manhattan":
+        for i in range(len(vector1)):
+            vdist += abs(vector1[i] - vector2[i])
+    else:
+        raise ValueError('Invalid parameter: '+str(metric))
+    return  vdist
+
 def check_type(variable, dtype):
     if variable.dtype != dtype:
         raise TypeError('Invalid K_x dtype: ' + variable.dtype + ', expected ' + dtype)
@@ -44,13 +53,25 @@ class GaussianProcessGPU:
         self.shown_idx = np.asarray(
             np.concatenate((self.shown_idx, np.zeros(self.n_shown_padded - self.n_shown))),
             dtype=self.int_type)
-        self.predict_idx = np.arange(0, self.n_predict_padded, dtype=self.int_type)
+        self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
+        self.predict_idx = np.asarray(
+            np.concatenate((self.predict_idx, np.zeros(self.n_predict_padded - self.n_predict))),
+            dtype=self.int_type)
         self.K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
         self.K_x = np.zeros((self.n_shown_padded, self.n_predict_padded), dtype=self.float_type)
+        self.K_xK = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
         self.K_noise = cumath.np.random.normal(1, 0.1, self.n_shown)  # Generate diagonal noise
         self.K_noise = np.asfarray(
             np.concatenate((self.K_noise, np.zeros(self.n_shown_padded - self.n_shown))),
             dtype=self.float_type)
+        self.K_inv = np.asfarray(self.K, dtype="float32")
+        self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_total)
+        self.diag_K_xx = np.asfarray(
+            np.concatenate((self.diag_K_xx, np.zeros(self.n_total_padded - self.n_total))),
+            dtype=self.float_type)
+
+        self.diag_K_xKK_x_T = np.zeros((1, self.n_total_padded), dtype="float32")
+
 
 
 
@@ -68,6 +89,9 @@ class GaussianProcessGPU:
         self.K_gpu = drv.mem_alloc(self.K.nbytes)
         drv.memcpy_htod(self.K_gpu, self.K)
 
+        check_type(self.K_inv, self.float_type)
+        self.K_inv_gpu = drv.mem_alloc(self.K_inv.nbytes)
+
         check_type(self.K_noise, self.float_type)
         self.K_noise_gpu = drv.mem_alloc(self.K_noise.nbytes)
         drv.memcpy_htod(self.K_noise_gpu, self.K_noise)
@@ -79,6 +103,18 @@ class GaussianProcessGPU:
         check_type(self.predict_idx, self.int_type)
         self.predict_idx_gpu = drv.mem_alloc(self.predict_idx.nbytes)
         drv.memcpy_htod(self.predict_idx_gpu, self.predict_idx)
+
+        check_type(self.K_xK, self.float_type)
+        self.K_xK_gpu = drv.mem_alloc(self.K_xK.nbytes)
+
+        check_type(self.diag_K_xx, self.float_type)
+        self.diag_K_xx_gpu = drv.mem_alloc(self.diag_K_xx.nbytes)
+        drv.memcpy_htod(self.diag_K_xx_gpu, self.diag_K_xx)
+
+        self.diag_K_xKK_x_T_gpu = drv.mem_alloc(self.diag_K_xKK_x_T.nbytes)
+        drv.memcpy_htod(self.diag_K_xKK_x_T_gpu, self.diag_K_xKK_x_T)
+
+
 
     def round_up_to_blocksize(self, num):
         if num % self.block_size[0] != 0:
@@ -93,118 +129,47 @@ class GaussianProcessGPU:
         if debug:
             drv.memcpy_dtoh(self.K, self.K_gpu)
             print("K")
-            print(self.K[:4, :4])
-            print(np.matrix(K_test[:4, :4]) - np.matrix(self.K[:4, :4]))
+            print(self.K)
+            print(np.matrix(K_test) - np.matrix(self.K))
             print(np.allclose(self.K, K_test))
 
-        K_x_test_features = np.asfarray([self.img_features[i] for i in self.predict_idx], dtype=self.float_type)
+        self.invert_K()
+
+        K_x_test_features = np.asfarray(self.img_features, dtype=self.float_type)
         self.calc_K_x()
         if debug:
             drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
             print("Kx")
-            print(self.K_x[:, :4])
+            print(self.K_x)
             print(self.predict_idx)
-            K_x_test = dist.cdist(K_test_features, K_x_test_features, 'cityblock')
-            K_x_test = np.asfarray(K_x_test, dtype="float32")
+            K_x_test = np.zeros((self.n_total_padded, self.n_shown_padded), dtype="float32")
+            for i, idx1 in enumerate(self.predict_idx):
+                for j, idx2 in enumerate(self.shown_idx):
+                    vdist = distance(self.img_features[idx1], self.img_features[idx2]) / len(self.img_features[0])
+                    K_x_test[i][j] = vdist
             print("K_x_test")
-            print(K_x_test[:, :4])
-            diff = np.matrix(K_x_test[:, :4]) - np.matrix(self.K_x[:, :4])
+            print(K_x_test)
+            diff = np.isclose(np.matrix(K_x_test[:, :5]), np.matrix(self.K_x[:, :5]))
             print(diff)
             #for line in Kx.tolist():
             #    print(line)
             #TODO: something wrong with the test
+
+        self.calc_K_xK()
+        if debug:
+            drv.memcpy_dtoh(self.K_xK, self.K_xK_gpu)
+            print("K_xK test")
+            K_xK_test = (np.matrix(self.K_x) * np.matrix(self.K_inv))
+            print(np.isclose(self.K_xK, K_xK_test))
+
+        self.calc_K_xKK_x_T()
+        if debug:
+            drv.memcpy_dtoh(self.diag_K_xKK_x_T, self.diag_K_xKK_x_T_gpu)
+            print("K_xKK_x_T test")
+            print(np.isclose(self.diag_K_xKK_x_T, np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)))
+
+
     def moo(self):
-
-        #print "K_x"
-        #print K_x
-
-        # K_inv
-        #*******************************************************************************************************************************************************************************************************************************
-
-        K_inv = cumath.np.linalg.inv(K)
-        K_inv = np.asfarray(K_inv, dtype = "float32")
-        K_inv_gpu = drv.mem_alloc(K_inv.nbytes)
-        drv.memcpy_htod(K_inv_gpu, K_inv)
-        #*******************************************************************************************************************************************************************************************************************************
-
-        #print "K_inv"
-        #print K_inv
-
-        K_inv_test = np.linalg.inv(K)
-
-        #print "K_inv"
-        #print K_inv_test
-
-        #print np.all(K_inv == K_inv_test)
-
-
-        # K_x.K
-        #*******************************************************************************************************************************************************************************************************************************
-
-        h = cublas.cublasCreate()
-
-        K_xK = np.zeros((n_total_img, n_shown_img), dtype = "float32")
-        K_xK_gpu = drv.mem_alloc(K_xK.nbytes)
-
-        CUBLAS_OP_N = 0
-        alpha = 1.0
-        beta = 0.0
-
-        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, n_shown_img, n_total_img, n_shown_img, alpha, K_inv_gpu, n_shown_img, K_x_gpu, n_shown_img, beta, K_xK_gpu, n_shown_img)
-
-        drv.memcpy_dtoh(K_xK, K_xK_gpu)
-
-        cublas.cublasDestroy(h)
-        #*******************************************************************************************************************************************************************************************************************************
-
-
-        #print "K_xK"
-        #print K_xK
-
-
-        K_xK_test = np.dot(K_x, K)
-
-        #print "K_xK"
-        #print K_xK
-
-
-        # diag_K_xx
-        #*******************************************************************************************************************************************************************************************************************************
-
-        diag_K_xx = cumath.np.random.normal(1, 0.1, n_total_img)
-        diag_K_xx = np.asfarray(diag_K_xx, dtype = "float32")
-        diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
-        drv.memcpy_htod(diag_K_xx_gpu, diag_K_xx)
-
-        #*******************************************************************************************************************************************************************************************************************************
-
-        #print "diag_K_xx"
-        #print diag_K_xx
-
-
-        # diag_K_xKK_x_T
-        #*******************************************************************************************************************************************************************************************************************************
-
-        diag_K_xKK_x_T = np.zeros((1, n_total_img), dtype="float32")
-        diag_K_xKK_x_T_gpu = drv.mem_alloc(diag_K_xKK_x_T.nbytes)
-        drv.memcpy_htod(diag_K_xKK_x_T_gpu, diag_K_xKK_x_T)
-
-        GRID_SIZE_x = (n_total_img + block_size - 1) / block_size
-        GRID_SIZE_y = (1 + block_size - 1) / block_size
-
-        func = mod.get_function("matMulDiag")
-        func(K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu, np.int32(n_total_img), np.int32(n_shown_img), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-
-        drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
-
-        #print "diag_K_xKK_x_T"
-        #print diag_K_xKK_x_T
-
-        diag_K_xKK_x_T_test = np.diag(np.dot(K_xK, K_x.T))
-
-        #print "diag_K_xKK_x_T_test"
-        #print diag_K_xKK_x_T_test
-
 
         # variance
         #*******************************************************************************************************************************************************************************************************************************
@@ -296,9 +261,17 @@ class GaussianProcessGPU:
         cuda_func(self.K_gpu, self.shown_idx_gpu, self.feat_gpu, self.K_noise_gpu, np.int32(self.n_shown_padded),
                   np.int32(self.n_features), block=self.block_size, grid=grid_size)
 
-    def calc_K_x(self):
-        # Variable type checking
+    def invert_K(self):
+        K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
+        drv.memcpy_dtoh(K, self.K_gpu)
+        print(K)
+        tmp = cumath.np.linalg.inv(K[:self.n_shown, :self.n_shown])
+        self.K_inv[:tmp.shape[0], :tmp.shape[1]] = tmp
+        print("K_inv")
+        print(self.K_inv)
+        drv.memcpy_htod(self.K_inv_gpu, self.K_inv)
 
+    def calc_K_x(self):
         grid_size_xy = (self.n_shown_padded + self.block_size[0] - 1) / self.block_size[0]
         grid_size_z = (self.n_features + self.block_size[2] - 1) / self.block_size[2]
         grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
@@ -306,6 +279,25 @@ class GaussianProcessGPU:
         cuda_func = self.cuda_module.get_function("generate__K_x__")
         cuda_func(self.K_x_gpu, self.shown_idx_gpu, self.predict_idx_gpu, self.feat_gpu, np.int32(self.n_shown_padded),
              np.int32(self.n_predict_padded), np.int32(self.n_features), block=self.block_size, grid=grid_size)
+
+    def calc_K_xK(self):
+        h = cublas.cublasCreate()
+        CUBLAS_OP_N = 0
+        alpha = 1.0
+        beta = 0.0
+        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, self.n_shown_padded, self.n_predict_padded, self.n_shown_padded,
+                           alpha, self.K_inv_gpu, self.n_shown_padded, self.K_x_gpu, self.n_shown_padded, beta, self.K_xK_gpu,
+                           self.n_shown_padded)
+        cublas.cublasDestroy(h)
+
+    def calc_K_xKK_x_T(self):
+        grid_size_x = (self.n_total_padded + self.block_size[0] - 1) / self.block_size[0]
+        grid_size_y = (1 + self.block_size[0] - 1) / self.block_size[0]
+        grid_size = (grid_size_x, grid_size_y, 1)
+
+        cuda_func = self.cuda_module.get_function("matMulDiag")
+        cuda_func(self.K_xK_gpu, self.K_x_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_total_padded),
+                  np.int32(self.n_shown_padded), block=(self.block_size[0], self.block_size[0], 1), grid = grid_size)
 
 
 if __name__ == "__main__":
