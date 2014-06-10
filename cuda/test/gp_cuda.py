@@ -50,9 +50,10 @@ class GaussianProcessGPU:
         self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)  # Pad to match block size
         self.n_predict = self.int_type(self.n_total - self.n_shown)
         self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
-        self.shown_idx = np.asarray(
-            np.concatenate((self.shown_idx, np.zeros(self.n_shown_padded - self.n_shown))),
-            dtype=self.int_type)
+        #self.shown_idx = np.asarray(
+        #    np.concatenate((self.shown_idx, np.zeros(self.n_shown_padded - self.n_shown))),
+        #    dtype=self.int_type)
+        self.shown_idx = self.pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.int_type)
         self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
         self.predict_idx = np.asarray(
             np.concatenate((self.predict_idx, np.zeros(self.n_predict_padded - self.n_predict))),
@@ -64,14 +65,15 @@ class GaussianProcessGPU:
         self.K_noise = np.asfarray(
             np.concatenate((self.K_noise, np.zeros(self.n_shown_padded - self.n_shown))),
             dtype=self.float_type)
-        self.K_inv = np.asfarray(self.K, dtype="float32")
+        self.K_inv = np.asfarray(self.K, dtype=self.float_type)
         self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_total)
         self.diag_K_xx = np.asfarray(
             np.concatenate((self.diag_K_xx, np.zeros(self.n_total_padded - self.n_total))),
             dtype=self.float_type)
-
-        self.diag_K_xKK_x_T = np.zeros((1, self.n_total_padded), dtype="float32")
-
+        self.diag_K_xKK_x_T = np.zeros((1, self.n_total_padded), dtype=self.float_type)
+        self.variance = np.zeros((1, self.n_total_padded), dtype=self.float_type)
+        self.feedback = np.array(np.random.random(self.n_shown))
+        self.feedback = np.asfarray(self.feedback, dtype=self.float_type)
 
 
 
@@ -111,15 +113,27 @@ class GaussianProcessGPU:
         self.diag_K_xx_gpu = drv.mem_alloc(self.diag_K_xx.nbytes)
         drv.memcpy_htod(self.diag_K_xx_gpu, self.diag_K_xx)
 
+        check_type(self.diag_K_xKK_x_T, self.float_type)
         self.diag_K_xKK_x_T_gpu = drv.mem_alloc(self.diag_K_xKK_x_T.nbytes)
         drv.memcpy_htod(self.diag_K_xKK_x_T_gpu, self.diag_K_xKK_x_T)
 
+        check_type(self.variance, self.float_type)
+        self.variance_gpu = drv.mem_alloc(self.variance.nbytes)
+
+        self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
+        drv.memcpy_htod(self.feedback_gpu, self.feedback)
 
 
     def round_up_to_blocksize(self, num):
         if num % self.block_size[0] != 0:
             return num + (self.block_size[0] - (num % self.block_size[0]))
         return self.int_type(num)
+
+    def pad_vector(self, vector, n, n_pad, dtype=None):
+        if dtype:
+            return np.asarray(np.concatenate((vector, np.zeros(n_pad - n))), dtype=dtype)
+        return np.asarray(np.concatenate((vector, np.zeros(n_pad - n))), dtype=vector.dtype)
+
 
     def gaussian_process(self, debug=False):
         K_test_features = np.asfarray([self.img_features[i] for i in self.shown_idx], dtype=self.float_type)
@@ -168,40 +182,16 @@ class GaussianProcessGPU:
             print("K_xKK_x_T test")
             print(np.isclose(self.diag_K_xKK_x_T, np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)))
 
+        self.calc_variance()
+        if debug:
+            drv.memcpy_dtoh(self.variance, self.variance_gpu)
+            variance_test = np.sqrt(np.abs(np.subtract(self.diag_K_xx, self.diag_K_xKK_x_T)))
+            print("Variance test")
+            print(np.isclose(self.variance, variance_test))
 
     def moo(self):
-
-        # variance
-        #*******************************************************************************************************************************************************************************************************************************
-        variance = np.zeros((1, n_total_img), dtype = "float32")
-        variance_gpu = drv.mem_alloc(variance.nbytes)
-        func = mod.get_function("generate__variance__")
-
-        GRID_SIZE_x = (n_total_img + block_size - 1) / block_size
-        GRID_SIZE_y = (1 + block_size - 1) / block_size
-
-        func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, np.int32(n_total_img), block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-
-        drv.memcpy_dtoh(variance, variance_gpu)
-        #*******************************************************************************************************************************************************************************************************************************
-
-        print "Variance"
-        print variance
-
-        variance_test = np.sqrt(np.abs(np.subtract(diag_K_xx, diag_K_xKK_x_T)))
-
-        print "Variance_test"
-        print variance_test
-
-
         # Mean
         #*******************************************************************************************************************************************************************************************************************************
-        feedback = np.array(np.random.random(n_shown_img))
-        feedback = np.array([feedback])
-        feedback = np.asfarray(feedback, dtype = "float32")
-
-        feedback_gpu = drv.mem_alloc(feedback.nbytes)
-        drv.memcpy_htod(feedback_gpu, feedback)
 
         h = cublas.cublasCreate()
 
@@ -294,10 +284,17 @@ class GaussianProcessGPU:
         grid_size_x = (self.n_total_padded + self.block_size[0] - 1) / self.block_size[0]
         grid_size_y = (1 + self.block_size[0] - 1) / self.block_size[0]
         grid_size = (grid_size_x, grid_size_y, 1)
-
         cuda_func = self.cuda_module.get_function("matMulDiag")
         cuda_func(self.K_xK_gpu, self.K_x_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_total_padded),
                   np.int32(self.n_shown_padded), block=(self.block_size[0], self.block_size[0], 1), grid = grid_size)
+
+    def calc_variance(self):
+        grid_size_x = (self.n_total_padded + self.block_size[0]- 1) / self.block_size[0]
+        grid_size_y = (1 + self.block_size[0] - 1) / self.block_size[0]
+        grid_size = (grid_size_x, grid_size_y, 1)
+        cuda_func = self.cuda_module.get_function("generate__variance__")
+        cuda_func(self.variance_gpu, self.diag_K_xx_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_total),
+                  block=(self.block_size[0], self.block_size[0], 1), grid=grid_size)
 
 
 if __name__ == "__main__":
