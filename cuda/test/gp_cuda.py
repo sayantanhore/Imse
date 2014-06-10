@@ -50,14 +50,9 @@ class GaussianProcessGPU:
         self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)  # Pad to match block size
         self.n_predict = self.int_type(self.n_total - self.n_shown)
         self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
-        #self.shown_idx = np.asarray(
-        #    np.concatenate((self.shown_idx, np.zeros(self.n_shown_padded - self.n_shown))),
-        #    dtype=self.int_type)
         self.shown_idx = self.pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.int_type)
         self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
-        self.predict_idx = np.asarray(
-            np.concatenate((self.predict_idx, np.zeros(self.n_predict_padded - self.n_predict))),
-            dtype=self.int_type)
+        self.predict_idx = self.pad_vector(self.predict_idx, self.n_predict, self.n_predict_padded)
         self.K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
         self.K_x = np.zeros((self.n_shown_padded, self.n_predict_padded), dtype=self.float_type)
         self.K_xK = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
