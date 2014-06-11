@@ -73,11 +73,8 @@ class GaussianProcessGPU:
         self.variance = np.zeros((1, self.n_total_padded), dtype=self.float_type)
         self.feedback = np.array(np.random.random(self.n_shown))
         self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-        self.mean = np.zeros((1, self.n_total), dtype=self.float_type)
-
-
-
-
+        self.mean = np.zeros((1, self.n_total_padded), dtype=self.float_type)
+        self.ucb = np.zeros((1, self.n_total_padded), dtype=self.float_type)
 
         # Allocate GPU memory and copy data, check datatype before each allocation
         # TODO: add dimension checking
@@ -128,6 +125,9 @@ class GaussianProcessGPU:
 
         check_type(self.mean, self.float_type)
         self.mean_gpu = drv.mem_alloc(self.mean.nbytes)
+
+        check_type(self.ucb, self.float_type)
+        self.ucb_gpu = drv.mem_alloc(self.ucb.nbytes)
 
 
     def round_up_to_blocksize(self, num):
@@ -196,28 +196,11 @@ class GaussianProcessGPU:
             print('Mean test')
             print(np.isclose(self.mean ,np.dot(self.K_xK, self.feedback)))
 
-    def moo(self):
-        # UCB
-        #*******************************************************************************************************************************************************************************************************************************
-        ucb = np.zeros((1, n_total_img), dtype = "float32")
-        ucb_gpu = drv.mem_alloc(ucb.nbytes)
-
-        GRID_SIZE_x = (n_total_img + block_size - 1) / block_size
-        GRID_SIZE_y = (1 + block_size - 1) / block_size
-
-        func = mod.get_function("generate__UCB__")
-        func(ucb_gpu, mean_gpu, variance_gpu, block = (block_size, block_size, 1), grid = (GRID_SIZE_x, GRID_SIZE_y, 1))
-        drv.memcpy_dtoh(ucb, ucb_gpu)
-
-        #*******************************************************************************************************************************************************************************************************************************
-
-        print "UCB"
-        print ucb
-
-        ucb_test = np.add(mean, variance)
-
-        print "ucb_test"
-        print ucb_test
+        self.calc_UCB()
+        if debug:
+            drv.memcpy_dtoh(self.ucb, self.ucb_gpu)
+            print('UCB test')
+            print(np.isclose(self.ucb, np.add(self.mean, self.variance)))
 
     def calc_K(self):
         """
@@ -284,6 +267,12 @@ class GaussianProcessGPU:
         cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, self.n_total_padded, self.n_shown_padded, alpha,
                            self.feedback_gpu, 1, self.K_xK_gpu, self.n_shown_padded, beta, self.mean_gpu, 1)
         cublas.cublasDestroy(h)
+
+    def calc_UCB(self):
+        grid_size_x = (self.n_total_padded + self.block_size[0]- 1) / self.block_size[0]
+        grid_size = (grid_size_x, 1, 1)
+        cuda_func = self.cuda_module.get_function("generate__UCB__")
+        cuda_func(self.ucb_gpu, self.mean_gpu, self.variance_gpu, block=(self.block_size[0], 1, 1), grid=grid_size)
 
 
 if __name__ == "__main__":
