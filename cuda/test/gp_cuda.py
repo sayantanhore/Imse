@@ -27,6 +27,13 @@ def check_type(variable, dtype):
     if variable.dtype != dtype:
         raise TypeError('Invalid K_x dtype: ' + variable.dtype + ', expected ' + dtype)
 
+
+def pad_vector(vector, n, n_pad, dtype=None):
+    if dtype:
+        return np.asarray(np.concatenate((vector, np.zeros(n_pad - n))), dtype=dtype)
+    return np.asarray(np.concatenate((vector, np.zeros(n_pad - n))), dtype=vector.dtype)
+
+
 class GaussianProcessGPU:
     def __init__(self, img_features, img_shown_idx, block_size=(16, 16, 4)):
         self.float_type = np.float32
@@ -51,21 +58,24 @@ class GaussianProcessGPU:
         self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
         self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype=self.float_type)
         self.shown_idx = np.asarray(img_shown_idx, dtype=self.int_type)
-        self.shown_idx = self.pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.int_type)
+        self.shown_idx = pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.int_type)
         self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
-        self.predict_idx = self.pad_vector(self.predict_idx, self.n_predict, self.n_predict_padded)
+        self.predict_idx = pad_vector(self.predict_idx, self.n_predict, self.n_predict_padded)
         self.K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
         self.K_x = np.zeros((self.n_shown_padded, self.n_predict_padded), dtype=self.float_type)
         self.K_xK = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
         self.K_noise = cumath.np.random.normal(1, 0.1, self.n_shown)  # Generate diagonal noise
-        self.K_noise = self.pad_vector(self.K_noise, self.n_shown, self.n_shown_padded, dtype=self.float_type)
+        self.K_noise = pad_vector(self.K_noise, self.n_shown, self.n_shown_padded, dtype=self.float_type)
         self.K_inv = np.asfarray(self.K, dtype=self.float_type)
         self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_total)
-        self.diag_K_xx = self.pad_vector(self.diag_K_xx, self.n_total, self.n_total_padded, dtype=self.float_type)
+        self.diag_K_xx = pad_vector(self.diag_K_xx, self.n_total, self.n_total_padded, dtype=self.float_type)
         self.diag_K_xKK_x_T = np.zeros((1, self.n_total_padded), dtype=self.float_type)
         self.variance = np.zeros((1, self.n_total_padded), dtype=self.float_type)
         self.feedback = np.array(np.random.random(self.n_shown))
-        self.feedback = np.asfarray(self.feedback, dtype=self.float_type)
+        self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
+        self.mean = np.zeros((1, self.n_total), dtype=self.float_type)
+
+
 
 
 
@@ -116,16 +126,14 @@ class GaussianProcessGPU:
         self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
         drv.memcpy_htod(self.feedback_gpu, self.feedback)
 
+        check_type(self.mean, self.float_type)
+        self.mean_gpu = drv.mem_alloc(self.mean.nbytes)
+
 
     def round_up_to_blocksize(self, num):
         if num % self.block_size[0] != 0:
             return num + (self.block_size[0] - (num % self.block_size[0]))
         return self.int_type(num)
-
-    def pad_vector(self, vector, n, n_pad, dtype=None):
-        if dtype:
-            return np.asarray(np.concatenate((vector, np.zeros(n_pad - n))), dtype=dtype)
-        return np.asarray(np.concatenate((vector, np.zeros(n_pad - n))), dtype=vector.dtype)
 
 
     def gaussian_process(self, debug=False):
@@ -182,34 +190,13 @@ class GaussianProcessGPU:
             print("Variance test")
             print(np.isclose(self.variance, variance_test))
 
+        self.calc_mean()
+        if debug:
+            drv.memcpy_dtoh(self.mean, self.mean_gpu)
+            print('Mean test')
+            print(np.isclose(self.mean ,np.dot(self.K_xK, self.feedback)))
+
     def moo(self):
-        # Mean
-        #*******************************************************************************************************************************************************************************************************************************
-
-        h = cublas.cublasCreate()
-
-        mean = np.zeros((1, n_total_img), dtype = "float32")
-        mean_gpu = drv.mem_alloc(mean.nbytes)
-
-        CUBLAS_OP_N = 0
-        alpha = 1.0
-        beta = 0.0
-
-        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, n_total_img, n_shown_img, alpha, feedback_gpu, 1, K_xK_gpu, n_shown_img, beta, mean_gpu, 1)
-        drv.memcpy_dtoh(mean, mean_gpu)
-
-        cublas.cublasDestroy(h)
-        #*******************************************************************************************************************************************************************************************************************************
-
-
-        print "mean"
-        print mean
-
-        mean_test = np.dot(K_xK, feedback.T)
-
-        print "mean_test"
-        print mean_test.T
-
         # UCB
         #*******************************************************************************************************************************************************************************************************************************
         ucb = np.zeros((1, n_total_img), dtype = "float32")
@@ -288,6 +275,15 @@ class GaussianProcessGPU:
         cuda_func = self.cuda_module.get_function("generate__variance__")
         cuda_func(self.variance_gpu, self.diag_K_xx_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_total),
                   block=(self.block_size[0], self.block_size[0], 1), grid=grid_size)
+
+    def calc_mean(self):
+        h = cublas.cublasCreate()
+        CUBLAS_OP_N = 0
+        alpha = 1.0
+        beta = 0.0
+        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, self.n_total_padded, self.n_shown_padded, alpha,
+                           self.feedback_gpu, 1, self.K_xK_gpu, self.n_shown_padded, beta, self.mean_gpu, 1)
+        cublas.cublasDestroy(h)
 
 
 if __name__ == "__main__":
