@@ -38,10 +38,9 @@ class GaussianProcessGPU:
         cuda_source = open('../kernels.c', 'r')
         self.cuda_module = SourceModule(cuda_source.read())
 
+        # Inialize variables
         # Pad everything to match block size
-        # Add zero row to the beginning of feature matrix for zero padding in cuda operations
-        self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype=self.float_type)
-        self.shown_idx = np.asarray(img_shown_idx, dtype=self.int_type)
+        # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
         #self.n_total = np.size(self.img_features, 0) TODO: change these to use proper values after refactoring
         #self.n_shown = np.size(self.img_shown_idx, 0)
         self.n_total = self.int_type(16)
@@ -50,6 +49,8 @@ class GaussianProcessGPU:
         self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)  # Pad to match block size
         self.n_predict = self.int_type(self.n_total - self.n_shown)
         self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
+        self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype=self.float_type)
+        self.shown_idx = np.asarray(img_shown_idx, dtype=self.int_type)
         self.shown_idx = self.pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.int_type)
         self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
         self.predict_idx = self.pad_vector(self.predict_idx, self.n_predict, self.n_predict_padded)
@@ -57,14 +58,10 @@ class GaussianProcessGPU:
         self.K_x = np.zeros((self.n_shown_padded, self.n_predict_padded), dtype=self.float_type)
         self.K_xK = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
         self.K_noise = cumath.np.random.normal(1, 0.1, self.n_shown)  # Generate diagonal noise
-        self.K_noise = np.asfarray(
-            np.concatenate((self.K_noise, np.zeros(self.n_shown_padded - self.n_shown))),
-            dtype=self.float_type)
+        self.K_noise = self.pad_vector(self.K_noise, self.n_shown, self.n_shown_padded, dtype=self.float_type)
         self.K_inv = np.asfarray(self.K, dtype=self.float_type)
         self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_total)
-        self.diag_K_xx = np.asfarray(
-            np.concatenate((self.diag_K_xx, np.zeros(self.n_total_padded - self.n_total))),
-            dtype=self.float_type)
+        self.diag_K_xx = self.pad_vector(self.diag_K_xx, self.n_total, self.n_total_padded, dtype=self.float_type)
         self.diag_K_xKK_x_T = np.zeros((1, self.n_total_padded), dtype=self.float_type)
         self.variance = np.zeros((1, self.n_total_padded), dtype=self.float_type)
         self.feedback = np.array(np.random.random(self.n_shown))
@@ -115,6 +112,7 @@ class GaussianProcessGPU:
         check_type(self.variance, self.float_type)
         self.variance_gpu = drv.mem_alloc(self.variance.nbytes)
 
+        check_type(self.feedback, self.float_type)
         self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
         drv.memcpy_htod(self.feedback_gpu, self.feedback)
 
