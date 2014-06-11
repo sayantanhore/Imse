@@ -28,7 +28,6 @@ __global__ void generate__K_x__(float *K_x_gpu, int *shown_gpu, int *predict_gpu
 
     atomicAdd(&K_x_gpu[y * shown_size + x], fdividef(fabsf(feat_gpu[shown_gpu[x] * feature_size + z] -
         feat_gpu[predict_gpu[y] * feature_size + z]), feature_size));
-
 }
 
 __global__ void generate__diag_K_xx__(float *diag_K_xx_gpu, float *K_xx_noise_gpu)
