@@ -25,8 +25,11 @@ def distance(vector1, vector2, metric="manhattan"):
 
 def check_type(variable, dtype):
     if variable.dtype != dtype:
-        raise TypeError('Invalid K_x dtype: ' + variable.dtype + ', expected ' + dtype)
+        raise TypeError('Invalid variable dtype: ' + str(variable.dtype) + ', expected ' + str(dtype))
 
+def check_dimensions(array, dims):  #TODO: implement
+    if np.shape(array) != dims:
+        raise ValueError('Invalid array shape: ' + str(np.shape(array)) + ', expected ' + str(dims))
 
 def pad_vector(vector, n, n_pad, dtype=None):
     if dtype:
@@ -50,13 +53,29 @@ def check_result(testname, A, B):
             print(testname + ' test passed')
 
 
+def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
+    """
+    Allocate space for array in GPU memory.
+    Parameters:
+        array is the array to allocate and possibly copy
+        type is the expected type of the array for checking
+        size_x, size_y and size_z are the unpadded dimensions of the array
+        copy determines if the array will be just allocated or also copied to GPU memory (True to copy)
+    """
+    # TODO: Cuda error checking if operations fail
+    check_type(array, type)
+    check_dimensions(array, size_x, size_y, size_z)
+    array_gpu = drv.mem_alloc(array.nbytes)
+    if copy:
+        drv.memcpy_htod(array_gpu, array)
+    return array_gpu
+
 class GaussianProcessGPU:
     def __init__(self, img_features, img_shown_idx, block_size=(16, 16, 4)):
         self.float_type = np.float32
         self.int_type = np.int32
         self.block_size = block_size
-        self.n_features = np.size(img_features, 1) # TODO: Assuming the n_features is divisible by block_size[2]
-
+        self.n_features = np.size(img_features, 1) # TODO: Assuming the n_features is divisible by block_size[2], fix
 
         cuda_source = open('../kernels.c', 'r')
         self.cuda_module = SourceModule(cuda_source.read())
@@ -145,15 +164,41 @@ class GaussianProcessGPU:
         check_type(self.ucb, self.float_type)
         self.ucb_gpu = drv.mem_alloc(self.ucb.nbytes)
 
+    def add_feedback(self, user_feedback, feedback_idx):
+        """
+        Add a feedback value into the feedback vector and the index of the image for which feedback was given
+        to the shown images vector.
+
+        Parameters:
+            user_feedback is the feedback value from user (float)
+            feedback_idx is the index of the image for which the feedback was given
+        """
+        # TODO: Add cuda operation success checks?
+        drv.memcpy_dtoh(self.feedback, self.feedback_gpu)
+        drv.memcpy_dtoh(self.shown_idx, self.shown_idx_gpu)
+        if self.n_shown < self.n_shown_padded:  # If padded array has room left, add to it
+            self.feedback[self.n_shown] = self.float_type(user_feedback)  # Update feedback vector
+            self.shown_idx[self.n_shown] = self.int_type(feedback_idx)  # Update shown idx vector
+            self.n_shown += 1
+        else:  # Padded arrays are full, so create new padded arrays one blocksize larger before adding values.
+            self.feedback_gpu.free()
+            self.shown_idx_gpu.free()
+            self.n_shown += 1
+            self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)
+            self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
+            self.shown_idx = pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.float_type)
+            self.feedback[self.n_shown - 1] = user_feedback
+            self.shown_idx[self.n_shown - 1] = feedback_idx
+        # TODO: Add check for correct values (datatype, dimensions)
+        drv.memcpy_htod(self.feedback_gpu, self.feedback)
+        drv.memcpy_htod(self.shown_idx_gpu, self.shown_idx)
 
     def round_up_to_blocksize(self, num):
         if num % self.block_size[0] != 0:
             return num + (self.block_size[0] - (num % self.block_size[0]))
         return self.int_type(num)
 
-
     def gaussian_process(self, debug=False):
-
         self.calc_K()
         if debug:
             K_test_features = np.asfarray([self.img_features[i] for i in self.shown_idx], dtype=self.float_type)
