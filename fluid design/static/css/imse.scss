@@ -1,0 +1,22 @@
+// Sass script for IMSE
+
+// Author: Sayantan Hore
+// Created: 01.06.2014
+
+
+// Setting up variables
+
+$page-color: #424242;
+$sqBox-dim: 2em;
+
+body{
+    background-color: $page-color;
+}
+
+.sqbox{
+    width: $sqBox-dim;
+    height: $sqBox-dim;
+    left: 200px;
+    top: 200px;
+    background-color: red;
+}
