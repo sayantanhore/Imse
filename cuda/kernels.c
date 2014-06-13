@@ -43,9 +43,8 @@ __global__ void matMulDiag(float *A, float *B, float *C, int numRows, int numCol
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     if (x > numRows) return;
     for (int i = 0; i < numCols; ++i) {
-        result += A[x * numCols + i] * B[x * numCols + i];
+        C[x] += A[x * numCols + i] * B[x * numCols + i];
     }
-    C[x] = result;
 }
 
 __global__ void generate__variance__(float *variance_gpu, float *diag_K_xx_gpu, float *diag_K_xKK_x_T_gpu, int length)
