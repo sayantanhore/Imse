@@ -41,7 +41,7 @@ def check_result(testname, A, B):
         print(testname + ' test')
         if not np.size(A) == np.size(B):
             print(testname + ' size check failed')
-            print(testname + ': ' + str(np.size(A) + ' != ' + str(np.size(B))))
+            print(testname + ': ' + str(np.size(A)) + ' != ' + str(np.size(B)))
         if not np.allclose(A, B):
             print(testname + ' np.allclose test failed, np.isclose matrix:')
             print(np.isclose(A, B))
@@ -84,11 +84,9 @@ class GaussianProcessGPU:
         # Pad everything to match block size
         # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
         self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype=self.float_type)
-        self.n_total = np.size(self.img_features, 0)  # TODO: change these to use proper values after refactoring
+        self.n_total = np.size(self.img_features, 0)
         self.n_shown = np.size(img_shown_idx, 0)
-#        self.n_total = self.int_type(220)
         self.n_total_padded = self.round_up_to_blocksize(self.n_total)  # Pad to match block size
-#        self.n_shown = self.int_type(17)
         self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)  # Pad to match block size
         self.n_predict = self.int_type(self.n_total - self.n_shown)
         self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
@@ -102,14 +100,14 @@ class GaussianProcessGPU:
         self.K_noise = cumath.np.random.normal(1, 0.1, self.n_shown)  # Generate diagonal noise
         self.K_noise = pad_vector(self.K_noise, self.n_shown, self.n_shown_padded, dtype=self.float_type)
         self.K_inv = np.asfarray(self.K, dtype=self.float_type)
-        self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_total)
-        self.diag_K_xx = pad_vector(self.diag_K_xx, self.n_total, self.n_total_padded, dtype=self.float_type)
+        self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_predict)
+        self.diag_K_xx = pad_vector(self.diag_K_xx, self.n_predict, self.n_predict_padded, dtype=self.float_type)
         self.diag_K_xKK_x_T = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-        self.variance = np.zeros((1, self.n_total_padded), dtype=self.float_type)
+        self.variance = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
         self.feedback = np.array(np.random.random(self.n_shown))
         self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-        self.mean = np.zeros((1, self.n_total_padded), dtype=self.float_type)
-        self.ucb = np.zeros((1, self.n_total_padded), dtype=self.float_type)
+        self.mean = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
+        self.ucb = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
 
         # Allocate GPU memory and copy data, check datatype before each allocation
         # TODO: add dimension checking
@@ -228,7 +226,7 @@ class GaussianProcessGPU:
         if debug:
             drv.memcpy_dtoh(self.diag_K_xKK_x_T, self.diag_K_xKK_x_T_gpu)
             K_xKK_x_T_test = np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)
-            check_result("K_xKK_x_T test", self.diag_K_xKK_x_T, K_xKK_x_T_test)
+            check_result("K_xKK_x_T", self.diag_K_xKK_x_T, K_xKK_x_T_test)
 
         self.calc_variance()
         if debug:
@@ -275,7 +273,7 @@ class GaussianProcessGPU:
 
         cuda_func = self.cuda_module.get_function("generate__K_x__")
         cuda_func(self.K_x_gpu, self.shown_idx_gpu, self.predict_idx_gpu, self.feat_gpu, np.int32(self.n_shown_padded),
-             np.int32(self.n_predict_padded), np.int32(self.n_features), block=self.block_size, grid=grid_size)
+                  np.int32(self.n_predict_padded), np.int32(self.n_features), block=self.block_size, grid=grid_size)
 
     def calc_K_xK(self):
         h = cublas.cublasCreate()
@@ -288,32 +286,30 @@ class GaussianProcessGPU:
         cublas.cublasDestroy(h)
 
     def calc_K_xKK_x_T(self):
-        grid_size_x = (self.n_total_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size_y = (1 + self.block_size[0] - 1) / self.block_size[0]
-        grid_size = (grid_size_x, grid_size_y, 1)
+        grid_size_x = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
+        grid_size = (grid_size_x, 1, 1)
         cuda_func = self.cuda_module.get_function("matMulDiag")
-        cuda_func(self.K_xK_gpu, self.K_x_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_total_padded),
-                  np.int32(self.n_shown_padded), block=(self.block_size[0], self.block_size[0], 1), grid = grid_size)
+        cuda_func(self.K_xK_gpu, self.K_x_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_predict_padded),
+                  np.int32(self.n_shown_padded), block=(self.block_size[0], 1, 1), grid=grid_size)
 
     def calc_variance(self):
-        grid_size_x = (self.n_total_padded + self.block_size[0]- 1) / self.block_size[0]
-        grid_size_y = (1 + self.block_size[0] - 1) / self.block_size[0]
-        grid_size = (grid_size_x, grid_size_y, 1)
+        grid_size_x = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
+        grid_size = (grid_size_x, 1, 1)
         cuda_func = self.cuda_module.get_function("generate__variance__")
-        cuda_func(self.variance_gpu, self.diag_K_xx_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_total),
-                  block=(self.block_size[0], self.block_size[0], 1), grid=grid_size)
+        cuda_func(self.variance_gpu, self.diag_K_xx_gpu, self.diag_K_xKK_x_T_gpu, self.n_predict_padded,
+                  block=(self.block_size[0], 1, 1), grid=grid_size)
 
     def calc_mean(self):
         h = cublas.cublasCreate()
         CUBLAS_OP_N = 0
         alpha = 1.0
         beta = 0.0
-        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, self.n_total_padded, self.n_shown_padded, alpha,
+        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, self.n_predict_padded, self.n_shown_padded, alpha,
                            self.feedback_gpu, 1, self.K_xK_gpu, self.n_shown_padded, beta, self.mean_gpu, 1)
         cublas.cublasDestroy(h)
 
     def calc_UCB(self):
-        grid_size_x = (self.n_total_padded + self.block_size[0]- 1) / self.block_size[0]
+        grid_size_x = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
         grid_size = (grid_size_x, 1, 1)
         cuda_func = self.cuda_module.get_function("generate__UCB__")
         cuda_func(self.ucb_gpu, self.mean_gpu, self.variance_gpu, block=(self.block_size[0], 1, 1), grid=grid_size)
