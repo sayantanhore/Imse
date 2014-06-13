@@ -71,7 +71,7 @@ def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
     return array_gpu
 
 class GaussianProcessGPU:
-    def __init__(self, img_features, img_shown_idx, block_size=(16, 16, 4)):
+    def __init__(self, img_features, img_shown_idx, feedback, block_size=(16, 16, 4)):
         self.float_type = np.float32
         self.int_type = np.int32
         self.block_size = block_size
@@ -104,7 +104,7 @@ class GaussianProcessGPU:
         self.diag_K_xx = pad_vector(self.diag_K_xx, self.n_predict, self.n_predict_padded, dtype=self.float_type)
         self.diag_K_xKK_x_T = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
         self.variance = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-        self.feedback = np.array(np.random.random(self.n_shown))
+        self.feedback = np.array(feedback)
         self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
         self.mean = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
         self.ucb = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
@@ -161,6 +161,18 @@ class GaussianProcessGPU:
 
         check_type(self.ucb, self.float_type)
         self.ucb_gpu = drv.mem_alloc(self.ucb.nbytes)
+
+    def get_variance(self):
+        drv.memcpy_dtoh(self.variance, self.variance_gpu)
+        return self.variance
+
+    def get_mean(self):
+        drv.memcpy_dtoh(self.mean, self.mean_gpu)
+        return self.mean
+
+    def get_ucb(self):
+        drv.memcpy_dtoh(self.ucb, self.ucb_gpu)
+        return self.ucb
 
     def add_feedback(self, user_feedback, feedback_idx):
         """
@@ -246,6 +258,7 @@ class GaussianProcessGPU:
             ucb_test = np.add(self.mean, self.variance)  # The array shapes differ a bit, so slicing is different
             check_result('UCB', self.ucb[:self.n_predict, :], ucb_test[:self.n_predict])
 
+
     def calc_K(self):
         """
         """
@@ -318,5 +331,6 @@ class GaussianProcessGPU:
 if __name__ == "__main__":
     # Load image features
     feat = np.asfarray(np.load("../../data/cl25000.npy"), dtype="float32")
-    gaussianProcess = GaussianProcessGPU(feat, np.arange(33, dtype="int32"))
+    feedback = np.array(np.random.random(33))
+    gaussianProcess = GaussianProcessGPU(feat, feedback, np.arange(len(feedback), dtype="int32"))
     gaussianProcess.gaussian_process(debug=False)
