@@ -71,7 +71,7 @@ def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
     return array_gpu
 
 class GaussianProcessGPU:
-    def __init__(self, img_features, img_shown_idx, feedback, block_size=(16, 16, 4)):
+    def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4)):
         self.float_type = np.float32
         self.int_type = np.int32
         self.block_size = block_size
