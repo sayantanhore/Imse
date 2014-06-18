@@ -14,6 +14,7 @@ import scikits.cuda.cublas as cublas
 import numpy as np
 import scipy.spatial.distance as dist
 
+
 def distance(vector1, vector2, metric="manhattan"):
     vdist = 0
     if metric == "manhattan":
@@ -21,15 +22,18 @@ def distance(vector1, vector2, metric="manhattan"):
             vdist += abs(vector1[i] - vector2[i])
     else:
         raise ValueError('Invalid parameter: '+str(metric))
-    return  vdist
+    return vdist
+
 
 def check_type(variable, dtype):
     if variable.dtype != dtype:
         raise TypeError('Invalid variable dtype: ' + str(variable.dtype) + ', expected ' + str(dtype))
 
-def check_dimensions(array, dims):  #TODO: implement
+
+def check_dimensions(array, dims):  # TODO: implement proper checking in code
     if np.shape(array) != dims:
         raise ValueError('Invalid array shape: ' + str(np.shape(array)) + ', expected ' + str(dims))
+
 
 def pad_vector(vector, n, n_pad, dtype=None):
     if dtype:
@@ -70,14 +74,33 @@ def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
         drv.memcpy_htod(array_gpu, array)
     return array_gpu
 
+
 class GaussianProcessGPU:
-    def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4)):
-        self.float_type = np.float32
-        self.int_type = np.int32
+    """
+    Gaussian process class, which uses GPU for the distance and matrix calculations. This implementation is not
+    thoroughly tested, for example large imagesets will probably cause it to fail.
+
+    Constructing GaussianProcessGPU object:
+    GaussianProcessGPU(img_features, feedback, img_shown_idx, block_size=(16, 16, 4))
+
+    Parameters:
+        img_features is a 2D array, each row containing float features for one image.
+        feedback is a vector containing at least one initial observation as a float
+        img_shown_idx is a vector containing the indexes of the images for which feedback was given in the feedback
+            vector
+        block_size is the block size used in the GPU kernel calls. Don't change unless you know what you're doing.
+        float_type defines which numpy float type is used (tested with float32, may or may not work with float64)
+        int_type defines which numpy int type is used (tested with int32, may or may not work with int64)
+        kernel_file is the file from which GPU kernels are read.
+    """
+    def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4), float_type=np.float32,
+                 int_type=np.int32, kernel_file='../kernels.c'):
+        self.float_type = float_type
+        self.int_type = int_type
         self.block_size = block_size
         self.n_features = np.size(img_features, 1) # TODO: Assuming the n_features is divisible by block_size[2], fix
 
-        cuda_source = open('../kernels.c', 'r')
+        cuda_source = open(kernel_file, 'r')
         self.cuda_module = SourceModule(cuda_source.read())
 
         # Inialize variables
@@ -334,3 +357,8 @@ if __name__ == "__main__":
     feedback = np.array(np.random.random(33))
     gaussianProcess = GaussianProcessGPU(feat, feedback, np.arange(len(feedback), dtype="int32"))
     gaussianProcess.gaussian_process(debug=False)
+    print(np.shape(gaussianProcess.get_mean()))
+    print(np.shape(gaussianProcess.get_variance()))
+    gaussianProcess.add_feedback(0.7, 90)
+    print(np.shape(gaussianProcess.get_mean()))
+    print(np.shape(gaussianProcess.get_variance()))
