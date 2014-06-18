@@ -1,8 +1,8 @@
 import pickle
-import numpy
+import numpy as np
 import random
 import copy
-import GP
+import gp_cuda
 import math
 from Intelligence.path.Path import *
 
@@ -14,70 +14,23 @@ class GPSOM(object):
     def __init__(self, images_number_iteration, images_number_total, category):
         self.setsize = images_number_iteration
         self.images_number = images_number_total
-        self.clusters_number = (int(math.ceil(math.sqrt(math.sqrt(self.images_number)))))**2
+        self.first_sample_size = (int(math.ceil(math.sqrt(math.sqrt(self.images_number)))))**2
         self.category = category
         self.clusters = pickle.load(open(DATA_PATH+'clusters-to-datapoints-cl-' + str(images_number_total)))
         self.images_shown = []
-        self.previouse_images = []
+        self.previous_images = []
         self.feedback = []
         self.iteration = 0
-        self.gp = GP.GP()
+        self.gp = None
         self.selected_images = []
     
     def FirstRound(self):
-        
-        '''Pre-processing stage - sample first set of images
-        Take random images from different clusters 
-        because they are the most remote ones'''
-        
-        
-        chosen_clusters = numpy.arange(0,self.clusters_number)
-        #numpy.random.shuffle(chosen_clusters)
-        #if(self.category == "None"  and " " in self.category):
-        clusters_per_group = int(math.ceil(self.clusters_number / self.setsize))
-        #else:
-            #clusters_per_group = 2 * int(math.ceil(self.clusters_number / self.setsize))
-        cluster_counter = 0
-        images = []
-        while(cluster_counter < self.clusters_number -1):
-            if((self.clusters_number - cluster_counter) >= clusters_per_group) and ((self.clusters_number - cluster_counter) < 2 * clusters_per_group):
-                clusters_group = chosen_clusters[cluster_counter:]
-                cluster_counter = self.clusters_number
-            else:
-                clusters_group = chosen_clusters[cluster_counter:cluster_counter + clusters_per_group]
-                cluster_counter += clusters_per_group
-
-            numpy.random.shuffle(clusters_group)
-            cluster = clusters_group[0]
-            r = random.randint(0, len(self.clusters[cluster])-1)
-            images.append(self.clusters[cluster][r])
-            
-        '''
-        chosen_clusters = chosen_clusters[:self.setsize]
-        images = []
-        for c in chosen_clusters:
-            r = random.randint(0, len(self.clusters_color[c])-1)
-            images.append(self.clusters_color[c][r])
-        '''
-        
-        # Appending images from category selected by user to the returned random first round
-        
-        '''
-        if(self.category != "None" and " " not in self.category):
-            tags = pickle.load(open("/data/Imse/Data/tag_to_img_" + str(self.images_number)))
-            candidates = tags[self.category]
-            images_from_selected_category = random.sample(candidates, self.setsize / 2)
-            images.extend(images_from_selected_category)
-        '''
-        random.shuffle(images)
-        
-            
-        self.images_shown = images
-        self.previouse_images = images
+        """Pre-processing stage - sample first set of images
+        Take random images"""
+        self.images_shown = np.random.choice(self.images_number, self.first_sample_size, replace=False)
+        self.previouse_images = self.images_shown
         self.iteration += 1
-        
-        
-        return images
+        return self.images_shown
     
     def Predict(self, feedback, data):
         self.feedback = self.feedback + feedback
