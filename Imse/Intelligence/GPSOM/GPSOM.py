@@ -11,18 +11,25 @@ class GPSOM(object):
     '''Program parameters'''
     #IMAGES_NUMBER = 1000
     
-    def __init__(self, images_number_iteration, images_number_total, category):
+    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, data, clusters, category):
         self.setsize = images_number_iteration
         self.images_number = images_number_total
         self.clusters_number = (int(math.ceil(math.sqrt(math.sqrt(self.images_number)))))**2
         self.category = category
-        self.clusters = pickle.load(open(DATA_PATH+'clusters-to-datapoints-cl-' + str(images_number_total)))
-        self.images_shown = []
+        self.data = data
+        #self.clusters = pickle.load(open(DATA_PATH+'clusters-to-datapoints-cl-' + str(images_number_total)))
+        self.clusters = clusters
+        self.clusters_names = range(self.images_number, self.images_number + self.clusters_number)
+        self.images_shown = firstround_images_shown
         self.previouse_images = []
         self.feedback = []
         self.iteration = 0
-        self.gp = GP.GP()
+        self.gp = GP.GP(self.images_number, copy.deepcopy(self.images_shown), self.data)
         self.selected_images = []
+        self.chosen_model_vector = None
+        self.index_chosen_image = None
+        self.chosen_image = None
+        self.pseudo_feedback = None
     
     def FirstRound(self):
         
@@ -78,8 +85,61 @@ class GPSOM(object):
         
         
         return images
+        
+    def Predict(self, feedback, accepted = False):
+        
+        if accepted == True:
+            self.images_shown.append(self.chosen_image)
+            #self.feedback.append(self.pseudo_feedback)
+            
+            # Delete         
+        
+            self.clusters[self.chosen_model_vector] = numpy.delete(self.clusters[self.chosen_model_vector], self.index_chosen_image)
+            
+            if len(self.clusters[self.chosen_model_vector]) == 0:
+                del self.clusters[self.chosen_model_vector]
+                index_chosen_model_vector = list(self.clusters_names).index(self.chosen_model_vector + self.images_number)
+                self.clusters_names = numpy.delete(self.clusters_names, index_chosen_model_vector)
+        self.feedback = feedback
+        '''
+        if len(self.feedback):
+            no_of_pseudo_feedbacks = len(self.feedback) % len(feedback)
+            
+            if no_of_pseudo_feedbacks != 0:
+                #feedback.append(self.feedback[-no_of_pseudo_feedbacks:])
+                feedback = feedback + self.feedback[-no_of_pseudo_feedbacks:]
+                
+            self.feedback[-len(feedback):] = feedback
+        else:
+            self.feedback = self.feedback + feedback
+        '''
+        print "Feedback Vector :: " + str(len(self.feedback))
+        print self.feedback
+        datapoints_predict = self.clusters_names
+        
+        
+        if accepted == True:
+            ucb, mean = self.gp.GP(self.feedback, datapoints_predict, "clusters", self.iteration, [self.chosen_image])
+        else:
+            ucb, mean = self.gp.GP(self.feedback, datapoints_predict, "clusters", self.iteration)
+        
+        self.chosen_model_vector = self.clusters_names[ucb.argmax()]-self.images_number
+        print "Hello chosen model vector :: " + str(self.chosen_model_vector)
+        datapoints_predict = self.clusters[self.chosen_model_vector]
+        
+        ucb, mean = self.gp.GP(self.feedback, datapoints_predict, "images", self.iteration)
+        
+        self.index_chosen_image = ucb.argmax() 
+        self.chosen_image = datapoints_predict[self.index_chosen_image]
+        print "chosen image " + str(self.chosen_image)
+
+        
+        
+        self.pseudo_feedback = float("{0:.2f}".format(mean[self.index_chosen_image]))
+        
+        return self.chosen_image
     
-    def Predict(self, feedback, data):
+    def Predict2(self, feedback, data):
         self.feedback = self.feedback + feedback
         
         # Get selected images

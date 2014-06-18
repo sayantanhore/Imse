@@ -301,6 +301,7 @@
 				.prop('value', val);
 			// Sayantan
 			this.layout();
+			getFeedback(val);
 			// Sayantan
 			return false;
 		},

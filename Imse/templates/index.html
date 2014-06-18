@@ -5,19 +5,23 @@
 		<title>IMSE</title>
 		<meta name = "viewport" content = "width = device-width, initial-scale = 1.0">
 		<link rel="stylesheet" type="text/css" href="/static/lib/bootstrap3/css/bootstrap.min.css">
+		<link rel="stylesheet" href="/static/icons/font_awesome/css/font-awesome.min.css">
 		<link rel="stylesheet" type="text/css" href="/static/lib/slider/css/slider.css">
-		<link rel="stylesheet" type="text/css" href="/static/lib/css/search.css">
+		<link rel="stylesheet" type="text/css" href="/static/css/search.css">
 
-		<script type="text/javascript" src = "/static/lib/js/jquery-1.11.0.js"></script>
+		<script type="text/javascript" src = "/static/lib/jQuery/jquery-1.11.0.js"></script>
 		<script type="text/javascript" src = "/static/lib/bootstrap3/js/bootstrap.min.js"></script>
 		<script type="text/javascript" src = "/static/lib/slider/js/bootstrap-slider.js"></script>
-		<script type="text/javascript" src = "/static/lib/js/search.js"></script>
+		<script type="text/javascript" src = "/static/js/search.js"></script>
+		<script type="text/javascript" src = "/static/js/inset.js"></script>
+		<script type="text/javascript" src = "/static/js/imageBox.js"></script>
+		<script type="text/javascript" src = "/static/lib/spin/spin.min.js"></script>
 		<script type="text/javascript">
 			
 		</script>
 	</head>
 	<body>
-	<!-- Login Screen -->
+		<!-- Login Screen -->
 		<div class="modal fade" id="id_login" data-backdrop="static" data-keyboard="false">
 		  <div class="modal-dialog">
 		    <div class="modal-content">
@@ -41,6 +45,11 @@
 		  </div><!-- /.modal-dialog -->
 		</div><!-- /.modal -->
 
+		<!-- Mask -->
+		<div id = "id_mask">
+			<p>Loading, Please wait ...</p>
+		</div>
+
 
 		<div class = "navbar navbar-inverse navbar-static-top">
 		<!--
@@ -63,7 +72,7 @@
 						<li><a href = "#">Contact</a></li>
 					</ui>
 					<ui class = "nav navbar-nav navbar-right">
-						<li class = "active"><a href = "#">Next</a></li>
+						<li class = "active"><a href = "#">Accept</a></li>
 						<li  class = "active"><a href = "#">Finish</a></li>
 					</ui>
 				</div>
@@ -444,7 +453,7 @@
 							</div>
 							<div href = "#" class = "thumbnail col-md-3"  data-toggle = "tooltip" title = "Click to remove">
 							      
-							</div>
+							</div> 
 							<div href = "#" class = "thumbnail col-md-3"  data-toggle = "tooltip" title = "Click to remove">
 							      
 							</div>

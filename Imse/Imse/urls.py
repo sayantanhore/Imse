@@ -1,5 +1,6 @@
 from django.conf.urls import patterns, include, url
 from Intelligence.views import start_search, target_search, category_search, open_search, do_search, firstround_search
+from Intelligence.path.Path import *
 
 # Uncomment the next two lines to enable the admin:
 # from django.contrib import admin
@@ -15,9 +16,9 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     # url(r'^admin/', include(admin.site.urls)),
-    url(r'^data/$', 'django.views.static.serve', {'document_root': '/data/Imse/Data'}),
-    url(r'^start/media/(.*)$', 'django.views.static.serve', {'document_root': '/data/Imse/media'}),
-    url(r'^media/(.*)$', 'django.views.static.serve', {'document_root': '/data/Imse/media'}),
+    url(r'^data/$', 'django.views.static.serve', {'document_root': DATA_PATH}),
+    url(r'^start/media/(.*)$', 'django.views.static.serve', {'document_root': MEDIA_PATH}),
+    url(r'^media/(.*)$', 'django.views.static.serve', {'document_root': MEDIA_PATH}),
     url(r'^start/$', start_search),
     url(r'^firstround/$', firstround_search),
     

@@ -1,0 +1,115 @@
+body { 
+	background: url(../images/grey_background2.jpg) no-repeat center center fixed;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+	font-family: 'Titillium Web', sans-serif;
+}
+
+@media (max-width: 980px) {
+        /* Enable use of floated navbar text */
+        .navbar-text.pull-right {
+          float: none;
+          padding-left: 1px;
+          padding-right: 1px;
+        }
+      }
+      
+      
+
+.span*, .row-fluid{
+
+	text-align: center;
+
+}
+
+
+
+.span3{
+
+	position: relative;
+	text-align: center;
+
+}
+
+.span9{
+
+	width: 100%;
+	height: 100%;
+
+}
+
+.span9 .span3{
+
+	//background-color: #0B3861;
+
+}
+
+
+.span9 .row-fluid div{
+
+	
+	opacity: 1.0;
+
+}
+
+.well .well-small{
+
+
+    padding-left: 0px;
+    
+    
+}
+
+li{
+
+    margin-bottom: 2px;
+
+}
+
+li a{
+
+    margin: 0px;
+
+}
+
+div{
+
+    border: 0px solid;
+
+}
+
+.media-grid img{
+
+	//background-color: #2B3856;
+	background-color: white;
+	opacity: 0.5;
+
+}
+
+
+
+.img-polaroid-modified {
+  padding: 2px;
+  background-color: #fff;
+  
+  -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+     -moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.slider {
+  border: 0px solid;
+  width: 250px;
+  max-height: 18px;
+}
+
+input{
+
+	display: none;
+
+}
+
+
+

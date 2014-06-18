@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bootstrap 101 Template</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Dosis|Titillium+Web' rel='stylesheet' type='text/css'>
+    <link href='start.css' rel='stylesheet' type='text/css'>
+   	
+    <script src="jquery-1.10.1.min.js"></script>
+    <script src="../bootstrap/js/bootstrap.min.js"></script>
+    <script>
+    	$(document).ready(function(){
+    		//alert(document.documentElement.scrollHeight +":::"+ document.documentElement.clientHeight);
+    		
+    		$("#id_img_reference").css({height:300})
+
+		var body= $("body");
+		body.css("top", ($(window).height() - body.height())/2  + 'px');
+    	
+    	});
+    </script>
+  </head>
+  <body>
+    
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">ImSe</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#about">About</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+    <div id = "id_container" class = "container">
+    	<div class = "hero-unit">
+    		<h2>Welcome</h2>
+    		<p class = "muted"><small>This is ImSe, an exploratory time-efficient image retrieval system. To know more <a href = "#">click here</a>. </small></p>
+    		<div class="row">
+  				<div class="span4"><img id = "id_img_reference" src="im13.jpg" class="img-polaroid"/></div>
+  				<div id = "id_form_control" class="span6">
+  					<form class = "form-horizontal">
+  					<fieldset>
+  					<legend><span><i class="icon-circle-arrow-down"></i>&nbsp;</span>ImSe control panel</legend>
+  						<div class="control-group">  
+							<label class="control-label" for="select01">Select Algorithm</label>  
+							<div class="controls">  
+							  <select id="select01">  
+								<option>GP-SOM</option>  
+								<option>Exploitation</option>  
+								<option>Random</option>  
+							  </select>  
+							</div>  
+					  	</div>
+					  	<div class="control-group">  
+							<label class="control-label" for="select01">No. of images per iteration</label>  
+							<div class="controls">  
+							  <select id="select01">  
+								<option>10</option>  
+								<option>8</option>  
+								<option>6</option>
+								<option>4</option>  
+								<option>3</option>  
+								<option>2</option>
+								<option>1</option>  
+							  </select>  
+							</div>  
+					  	</div>
+					  	<div class="control-group">  
+							<label class="control-label" for="optionsCheckbox">Debug mode</label>  
+							<div class="controls">  
+							  <label class="checkbox">  
+								<input type="checkbox" id="optionsCheckbox" value="option1">  
+								Show distances on hover
+							  </label>
+							  <br/>
+							  <button type="submit" class="btn btn-primary">Let's Go</button>
+							</div>  
+					  </div>
+					  
+					  </fieldset>
+					</form>
+  				</div>
+			</div>
+    		
+    	</div>
+    </div>
+    
+  </body>
+</html>
