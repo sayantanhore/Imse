@@ -281,6 +281,7 @@ class GaussianProcessGPU:
             ucb_test = np.add(self.mean, self.variance)  # The array shapes differ a bit, so slicing is different
             check_result('UCB', self.ucb[:self.n_predict, :], ucb_test[:self.n_predict])
 
+        return self.ucb, self.mean
 
     def calc_K(self):
         """
