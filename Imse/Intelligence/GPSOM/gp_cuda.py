@@ -7,12 +7,14 @@ Created on Wed Jun  4 21:30:41 2014
 """
 
 import pycuda.driver as drv
-import pycuda.autoinit
+#import pycuda.autoinit
 from pycuda.compiler import SourceModule
 import pycuda.cumath as cumath
 import scikits.cuda.cublas as cublas
 import numpy as np
 import scipy.spatial.distance as dist
+from Intelligence.path.Path import FILE_ROOT_PATH
+
 
 def distance(vector1, vector2, metric="manhattan"):
     vdist = 0
@@ -21,15 +23,18 @@ def distance(vector1, vector2, metric="manhattan"):
             vdist += abs(vector1[i] - vector2[i])
     else:
         raise ValueError('Invalid parameter: '+str(metric))
-    return  vdist
+    return vdist
+
 
 def check_type(variable, dtype):
     if variable.dtype != dtype:
         raise TypeError('Invalid variable dtype: ' + str(variable.dtype) + ', expected ' + str(dtype))
 
-def check_dimensions(array, dims):  #TODO: implement
+
+def check_dimensions(array, dims):  # TODO: implement proper checking in code
     if np.shape(array) != dims:
         raise ValueError('Invalid array shape: ' + str(np.shape(array)) + ', expected ' + str(dims))
+
 
 def pad_vector(vector, n, n_pad, dtype=None):
     if dtype:
@@ -70,16 +75,44 @@ def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
         drv.memcpy_htod(array_gpu, array)
     return array_gpu
 
+
 class GaussianProcessGPU:
-    def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4)):
-        self.float_type = np.float32
-        self.int_type = np.int32
+    """
+    Gaussian process class, which uses GPU for the distance and matrix calculations. This implementation is not
+    thoroughly tested, for example large imagesets will probably cause it to fail.
+
+    Constructing GaussianProcessGPU object:
+    GaussianProcessGPU(img_features, feedback, img_shown_idx, block_size=(16, 16, 4))
+
+    Parameters:
+        img_features is a 2D array, each row containing float features for one image.
+        feedback is a vector containing at least one initial observation as a float
+        img_shown_idx is a vector containing the indexes of the images for which feedback was given in the feedback
+            vector
+        block_size is the block size used in the GPU kernel calls. Don't change unless you know what you're doing.
+        float_type defines which numpy float type is used (tested with float32, may or may not work with float64)
+        int_type defines which numpy int type is used (tested with int32, may or may not work with int64)
+        kernel_file is the file from which GPU kernels are read.
+    """
+    def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4), float_type=np.float32,
+                 int_type=np.int32, kernel_file = FILE_ROOT_PATH + 'Intelligence/GPSOM/kernels.c'):
+	print "Initialized starts"
+        self.float_type = float_type
+        self.int_type = int_type
         self.block_size = block_size
         self.n_features = np.size(img_features, 1) # TODO: Assuming the n_features is divisible by block_size[2], fix
+	print "Start from here"
+	#print kernel_file
+	cuda_source = open(kernel_file, 'r')
+	print "File located"
+	for line in cuda_source.readlines():
+		print line
 
-        cuda_source = open('./kernels.c', 'r')
-        self.cuda_module = SourceModule(cuda_source.read())
-
+	#try:
+	self.cuda_module = SourceModule(cuda_source.read())
+	#except Exception e:
+		#print e
+	print "Check zero"
         # Inialize variables
         # Pad everything to match block size
         # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
@@ -108,59 +141,62 @@ class GaussianProcessGPU:
         self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
         self.mean = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
         self.ucb = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-
+	print "Check one"
         # Allocate GPU memory and copy data, check datatype before each allocation
         # TODO: add dimension checking
         check_type(self.img_features, self.float_type)
+	print self.img_features.nbytes
         self.feat_gpu = drv.mem_alloc(self.img_features.nbytes)
+	print "456"
         drv.memcpy_htod(self.feat_gpu, self.img_features)
-
+	print "Check two"
         check_type(self.shown_idx, self.int_type)
         self.shown_idx_gpu = drv.mem_alloc(self.shown_idx.nbytes)
         drv.memcpy_htod(self.shown_idx_gpu, self.shown_idx)
-
+	print "Check three"
         check_type(self.K, self.float_type)
         self.K_gpu = drv.mem_alloc(self.K.nbytes)
         drv.memcpy_htod(self.K_gpu, self.K)
-
+	print "Check three"
         check_type(self.K_inv, self.float_type)
         self.K_inv_gpu = drv.mem_alloc(self.K_inv.nbytes)
-
+	print "Check four"
         check_type(self.K_noise, self.float_type)
         self.K_noise_gpu = drv.mem_alloc(self.K_noise.nbytes)
         drv.memcpy_htod(self.K_noise_gpu, self.K_noise)
-
+	print "Check four"
         check_type(self.K_x, self.float_type)
         self.K_x_gpu = drv.mem_alloc(self.K_x.nbytes)
         drv.memcpy_htod(self.K_x_gpu, self.K_x)
-
+	print "Check five"
         check_type(self.predict_idx, self.int_type)
         self.predict_idx_gpu = drv.mem_alloc(self.predict_idx.nbytes)
         drv.memcpy_htod(self.predict_idx_gpu, self.predict_idx)
-
+	print "Check six"
         check_type(self.K_xK, self.float_type)
         self.K_xK_gpu = drv.mem_alloc(self.K_xK.nbytes)
-
+	print "Check seven"
         check_type(self.diag_K_xx, self.float_type)
         self.diag_K_xx_gpu = drv.mem_alloc(self.diag_K_xx.nbytes)
         drv.memcpy_htod(self.diag_K_xx_gpu, self.diag_K_xx)
-
+	print "Check eight"
         check_type(self.diag_K_xKK_x_T, self.float_type)
         self.diag_K_xKK_x_T_gpu = drv.mem_alloc(self.diag_K_xKK_x_T.nbytes)
         drv.memcpy_htod(self.diag_K_xKK_x_T_gpu, self.diag_K_xKK_x_T)
-
+	print "Check nine"
         check_type(self.variance, self.float_type)
         self.variance_gpu = drv.mem_alloc(self.variance.nbytes)
-
+	print "Check ten"
         check_type(self.feedback, self.float_type)
         self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
         drv.memcpy_htod(self.feedback_gpu, self.feedback)
-
+	print "Check eleven"
         check_type(self.mean, self.float_type)
         self.mean_gpu = drv.mem_alloc(self.mean.nbytes)
-
+	print "Check twelve"
         check_type(self.ucb, self.float_type)
         self.ucb_gpu = drv.mem_alloc(self.ucb.nbytes)
+	print "Check end"
 
     def get_variance(self):
         drv.memcpy_dtoh(self.variance, self.variance_gpu)
@@ -257,7 +293,8 @@ class GaussianProcessGPU:
             drv.memcpy_dtoh(self.ucb, self.ucb_gpu)
             ucb_test = np.add(self.mean, self.variance)  # The array shapes differ a bit, so slicing is different
             check_result('UCB', self.ucb[:self.n_predict, :], ucb_test[:self.n_predict])
-
+	print "Returning from GP-CUDA"
+        return self.ucb, self.mean
 
     def calc_K(self):
         """
@@ -330,7 +367,12 @@ class GaussianProcessGPU:
 
 if __name__ == "__main__":
     # Load image features
-    feat = np.asfarray(np.load("../../data/cl25000.npy"), dtype="float32")
+    feat = np.asfarray(np.load("../../../../data/Data/cl25000.npy"), dtype="float32")
     feedback = np.array(np.random.random(33))
     gaussianProcess = GaussianProcessGPU(feat, feedback, np.arange(len(feedback), dtype="int32"))
     gaussianProcess.gaussian_process(debug=False)
+    print(np.shape(gaussianProcess.get_mean()))
+    print(np.shape(gaussianProcess.get_variance()))
+    gaussianProcess.add_feedback(0.7, 90)
+    print(np.shape(gaussianProcess.get_mean()))
+    print(np.shape(gaussianProcess.get_variance()))

@@ -15,3 +15,7 @@ DATA_PATH = '/ldata/IMSE/data/Data/'
 
 # For Django Local (for 25k images)
 MEDIA_PATH = '/ldata/IMSE/data/media/'
+
+# For accessing modules from Django dev server
+
+FILE_ROOT_PATH = '/ldata/IMSE/Imse/Imse/'

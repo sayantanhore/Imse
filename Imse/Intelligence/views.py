@@ -61,7 +61,8 @@ def start_search(request):
     # For apache server 
     #html = t.render(Context({'image' : '/data/Imse/media/' + target_img.filename}))
     # For django local
-    html = t.render(Context({'image' : '/media/' + target_img.filename}))
+    #html = t.render(Context({'image' : '/media/' + target_img.filename}))
+    html = t.render(Context({}))
     # For django local
     return HttpResponse(html)
     
@@ -202,7 +203,7 @@ def category_search(request):
 # FirstRound
 
 def firstround_search(request):
-    
+    print "Firstround..." 
     #t = get_template('Intelligence/search.html')
     colors = request.GET['colors']
     print "Colors :: " + colors
@@ -227,7 +228,6 @@ def firstround_search2(request):
 # Do Search
 
 def do_search(request, state = 'nostart'):
-    
     start_search = time.time()
     objs = Image.objects.all()[:IMAGENUM]
     try :
@@ -255,7 +255,7 @@ def do_search(request, state = 'nostart'):
         
         if e.algorithm =='GP-SOM':
             global predictor
-            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, data, clusters, e.category)
+            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, e.category)
             '''
             if e.algorithm == 'GP-UCB':
                 predictor = ucbGP.GPUCB(DATA_PATH, e.images_number_iteration, e.images_number_total, e.category)
