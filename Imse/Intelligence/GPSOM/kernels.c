@@ -1,4 +1,3 @@
-"""
 __global__ void generate__K__(float *K_gpu, int *shown_gpu, float *feat_gpu, float *K_noise_gpu,
     int shown_size, int feature_size)
 {
@@ -60,4 +59,3 @@ __global__ void generate__UCB__(float *ucb_gpu, float *mean_gpu, float *variance
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     ucb_gpu[x] = mean_gpu[x] + variance_gpu[x];
 }
-"""

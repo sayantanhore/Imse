@@ -5,9 +5,7 @@ Created on Wed Jun  4 21:30:41 2014
 
 @author: sayantan, lasse
 """
-
 import pycuda.driver as drv
-#import pycuda.autoinit
 from pycuda.compiler import SourceModule
 import pycuda.cumath as cumath
 import scikits.cuda.cublas as cublas
@@ -22,7 +20,7 @@ def distance(vector1, vector2, metric="manhattan"):
         for i in range(len(vector1)):
             vdist += abs(vector1[i] - vector2[i])
     else:
-        raise ValueError('Invalid parameter: '+str(metric))
+        raise ValueError('Invalid parameter: ' + str(metric))
     return vdist
 
 
@@ -43,19 +41,19 @@ def pad_vector(vector, n, n_pad, dtype=None):
 
 
 def check_result(testname, A, B):
-        print(testname + ' test')
-        if not np.size(A) == np.size(B):
-            print(testname + ' size check failed')
-            print(testname + ': ' + str(np.size(A)) + ' != ' + str(np.size(B)))
-        if not np.allclose(A, B):
-            print(testname + ' np.allclose test failed, np.isclose matrix:')
-            print(np.isclose(A, B))
-            print(testname + ' matrix:')
-            print(A)
-            print(testname + '_test matrix:')
-            print(B)
-        else:
-            print(testname + ' test passed')
+    print(testname + ' test')
+    if not np.size(A) == np.size(B):
+        print(testname + ' size check failed')
+        print(testname + ': ' + str(np.size(A)) + ' != ' + str(np.size(B)))
+    if not np.allclose(A, B):
+        print(testname + ' np.allclose test failed, np.isclose matrix:')
+        print(np.isclose(A, B))
+        print(testname + ' matrix:')
+        print(A)
+        print(testname + '_test matrix:')
+        print(B)
+    else:
+        print(testname + ' test passed')
 
 
 def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
@@ -94,25 +92,38 @@ class GaussianProcessGPU:
         int_type defines which numpy int type is used (tested with int32, may or may not work with int64)
         kernel_file is the file from which GPU kernels are read.
     """
+
     def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4), float_type=np.float32,
-                 int_type=np.int32, kernel_file = FILE_ROOT_PATH + 'Intelligence/GPSOM/kernels.c'):
-	print "Initialized starts"
+                 int_type=np.int32, kernel_file=FILE_ROOT_PATH + 'Intelligence/GPSOM/kernels.c'):
+        print("Initialized starts")
+        with open('feedback.txt') as infile:
+            feedback = np.loadtxt(infile)
+        with open('feat.txt') as infile:
+            img_features = np.loadtxt(infile)
+        with open('feedback_idx.txt') as infile:
+            img_shown_idx = np.loadtxt(infile)
+        import pycuda.autoinit
+        np.set_printoptions(linewidth=500)
+        print(feedback)
+        img_shown_idx = img_shown_idx.tolist()
+        print(img_shown_idx)
+        print(img_features.shape)
+        print(img_shown_idx[0])
+        print(len(img_shown_idx))
+        print(type(img_shown_idx))
         self.float_type = float_type
         self.int_type = int_type
         self.block_size = block_size
-        self.n_features = np.size(img_features, 1) # TODO: Assuming the n_features is divisible by block_size[2], fix
-	print "Start from here"
-	#print kernel_file
-	cuda_source = open(kernel_file, 'r')
-	print "File located"
-	for line in cuda_source.readlines():
-		print line
-
-	#try:
-	self.cuda_module = SourceModule(cuda_source.read())
-	#except Exception e:
-		#print e
-	print "Check zero"
+        self.n_features = np.size(img_features, 1)  # TODO: Assuming the n_features is divisible by block_size[2], fix
+        print("Start from here")
+        #print(kernel_file
+        cuda_source = open(kernel_file, 'r').read()
+        print("len cuda_source" + str(len(cuda_source)))
+        try:
+            self.cuda_module = SourceModule(cuda_source)
+        except Exception as e:
+            print(e)
+        print("Check zero")
         # Inialize variables
         # Pad everything to match block size
         # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
@@ -141,62 +152,50 @@ class GaussianProcessGPU:
         self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
         self.mean = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
         self.ucb = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-	print "Check one"
+        print("Check one")
         # Allocate GPU memory and copy data, check datatype before each allocation
         # TODO: add dimension checking
         check_type(self.img_features, self.float_type)
-	print self.img_features.nbytes
+        print(self.img_features.shape)
         self.feat_gpu = drv.mem_alloc(self.img_features.nbytes)
-	print "456"
         drv.memcpy_htod(self.feat_gpu, self.img_features)
-	print "Check two"
         check_type(self.shown_idx, self.int_type)
         self.shown_idx_gpu = drv.mem_alloc(self.shown_idx.nbytes)
         drv.memcpy_htod(self.shown_idx_gpu, self.shown_idx)
-	print "Check three"
         check_type(self.K, self.float_type)
         self.K_gpu = drv.mem_alloc(self.K.nbytes)
         drv.memcpy_htod(self.K_gpu, self.K)
-	print "Check three"
         check_type(self.K_inv, self.float_type)
         self.K_inv_gpu = drv.mem_alloc(self.K_inv.nbytes)
-	print "Check four"
         check_type(self.K_noise, self.float_type)
         self.K_noise_gpu = drv.mem_alloc(self.K_noise.nbytes)
         drv.memcpy_htod(self.K_noise_gpu, self.K_noise)
-	print "Check four"
         check_type(self.K_x, self.float_type)
         self.K_x_gpu = drv.mem_alloc(self.K_x.nbytes)
         drv.memcpy_htod(self.K_x_gpu, self.K_x)
-	print "Check five"
         check_type(self.predict_idx, self.int_type)
         self.predict_idx_gpu = drv.mem_alloc(self.predict_idx.nbytes)
         drv.memcpy_htod(self.predict_idx_gpu, self.predict_idx)
-	print "Check six"
         check_type(self.K_xK, self.float_type)
         self.K_xK_gpu = drv.mem_alloc(self.K_xK.nbytes)
-	print "Check seven"
         check_type(self.diag_K_xx, self.float_type)
         self.diag_K_xx_gpu = drv.mem_alloc(self.diag_K_xx.nbytes)
         drv.memcpy_htod(self.diag_K_xx_gpu, self.diag_K_xx)
-	print "Check eight"
         check_type(self.diag_K_xKK_x_T, self.float_type)
         self.diag_K_xKK_x_T_gpu = drv.mem_alloc(self.diag_K_xKK_x_T.nbytes)
         drv.memcpy_htod(self.diag_K_xKK_x_T_gpu, self.diag_K_xKK_x_T)
-	print "Check nine"
         check_type(self.variance, self.float_type)
         self.variance_gpu = drv.mem_alloc(self.variance.nbytes)
-	print "Check ten"
         check_type(self.feedback, self.float_type)
         self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
         drv.memcpy_htod(self.feedback_gpu, self.feedback)
-	print "Check eleven"
         check_type(self.mean, self.float_type)
         self.mean_gpu = drv.mem_alloc(self.mean.nbytes)
-	print "Check twelve"
         check_type(self.ucb, self.float_type)
         self.ucb_gpu = drv.mem_alloc(self.ucb.nbytes)
-	print "Check end"
+
+    #def __del__(self):
+        #self.context.pop()
 
     def get_variance(self):
         drv.memcpy_dtoh(self.variance, self.variance_gpu)
@@ -250,19 +249,18 @@ class GaussianProcessGPU:
             K_test_features = np.asfarray([self.img_features[i] for i in self.shown_idx], dtype=self.float_type)
             K_test = dist.cdist(K_test_features, K_test_features, 'cityblock') / self.n_features + np.diag(self.K_noise)
             drv.memcpy_dtoh(self.K, self.K_gpu)
-            check_result('K', self.K[:self.n_shown, :self.n_shown], K_test[:self.n_shown, :self.n_shown])
+            #check_result('K', self.K[:self.n_shown, :self.n_shown], K_test[:self.n_shown, :self.n_shown])
 
         self.invert_K()
-
         self.calc_K_x()
         if debug:
             drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
             K_x_test = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
-            for i, idx1 in enumerate(self.predict_idx):
-                for j, idx2 in enumerate(self.shown_idx):
-                    vdist = distance(self.img_features[idx1], self.img_features[idx2]) / len(self.img_features[0])
-                    K_x_test[i][j] = vdist
-            check_result('K_x', self.K_x[:self.n_predict, :self.n_shown], K_x_test[:self.n_predict, :self.n_shown])
+#            for i, idx1 in enumerate(self.predict_idx):
+#                for j, idx2 in enumerate(self.shown_idx):
+#                    vdist = distance(self.img_features[idx1], self.img_features[idx2]) / len(self.img_features[0])
+#                    K_x_test[i][j] = vdist
+            #check_result('K_x', self.K_x[:self.n_predict, :self.n_shown], K_x_test[:self.n_predict, :self.n_shown])
 
         self.calc_K_xK()
         if debug:
@@ -275,11 +273,13 @@ class GaussianProcessGPU:
             drv.memcpy_dtoh(self.diag_K_xKK_x_T, self.diag_K_xKK_x_T_gpu)
             K_xKK_x_T_test = np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)
             check_result("K_xKK_x_T", self.diag_K_xKK_x_T, K_xKK_x_T_test)
+        print("K_xKK_xT")
 
         self.calc_variance()
         if debug:
             drv.memcpy_dtoh(self.variance, self.variance_gpu)
-            variance_test = np.sqrt(np.abs(np.subtract(self.diag_K_xx[:self.n_predict], self.diag_K_xKK_x_T[:, :self.n_predict])))
+            variance_test = np.sqrt(
+                np.abs(np.subtract(self.diag_K_xx[:self.n_predict], self.diag_K_xKK_x_T[:, :self.n_predict])))
             check_result('Variance', self.variance[:, :self.n_predict], variance_test[:, :self.n_predict])
 
         self.calc_mean()
@@ -293,7 +293,7 @@ class GaussianProcessGPU:
             drv.memcpy_dtoh(self.ucb, self.ucb_gpu)
             ucb_test = np.add(self.mean, self.variance)  # The array shapes differ a bit, so slicing is different
             check_result('UCB', self.ucb[:self.n_predict, :], ucb_test[:self.n_predict])
-	print "Returning from GP-CUDA"
+        print("Returning from GP-CUDA")
         return self.ucb, self.mean
 
     def calc_K(self):
@@ -303,10 +303,9 @@ class GaussianProcessGPU:
         grid_size_z = (self.n_features + self.block_size[2] - 1) / self.block_size[2]
         grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
 
-
         cuda_func = self.cuda_module.get_function("generate__K__")
         cuda_func(self.K_gpu, self.shown_idx_gpu, self.feat_gpu, self.K_noise_gpu, np.int32(self.n_shown_padded),
-                  np.int32(self.n_features), block=self.block_size, grid=grid_size)
+                  np.int32(self.n_features), block = self.block_size, grid = grid_size)
 
     def invert_K(self):
         K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
@@ -327,12 +326,22 @@ class GaussianProcessGPU:
 
     def calc_K_xK(self):
         h = cublas.cublasCreate()
+        #cublas.cublasCheckStatus(h)
         CUBLAS_OP_N = 0
         alpha = 1.0
         beta = 0.0
+        drv.memcpy_dtoh(self.K_inv, self.K_inv_gpu)
+        drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
+        print('K_inv.shape' + str(self.K_inv.shape))
+        print('K_x.shape' + str(self.K_x.shape))
+        print('K_xK.shape' + str(self.K_xK.shape))
+        print(self.n_shown_padded)
+        print(self.n_predict_padded)
+
         cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, self.n_shown_padded, self.n_predict_padded, self.n_shown_padded,
-                           alpha, self.K_inv_gpu, self.n_shown_padded, self.K_x_gpu, self.n_shown_padded, beta, self.K_xK_gpu,
-                           self.n_shown_padded)
+                           alpha, self.K_inv_gpu, self.n_shown_padded, self.K_x_gpu, self.n_shown_padded, beta,
+                           self.K_xK_gpu, self.n_shown_padded)
+        print('moo')
         cublas.cublasDestroy(h)
 
     def calc_K_xKK_x_T(self):

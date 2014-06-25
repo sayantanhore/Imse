@@ -7,7 +7,8 @@ Created on Wed Jun  4 21:30:41 2014
 """
 
 import pycuda.driver as drv
-import pycuda.autoinit
+#import pycuda.autoinit
+import pycuda.tools
 from pycuda.compiler import SourceModule
 import pycuda.cumath as cumath
 import scikits.cuda.cublas as cublas
@@ -95,6 +96,13 @@ class GaussianProcessGPU:
     """
     def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4), float_type=np.float32,
                  int_type=np.int32, kernel_file='../kernels.c'):
+
+        import pycuda.autoinit
+        np.set_printoptions(linewidth=500)
+        print(feedback)
+        print(img_shown_idx)
+        print(len(img_shown_idx))
+        print(type(img_shown_idx))
         self.float_type = float_type
         self.int_type = int_type
         self.block_size = block_size
@@ -317,6 +325,11 @@ class GaussianProcessGPU:
         CUBLAS_OP_N = 0
         alpha = 1.0
         beta = 0.0
+        print('K_inv.shape' + str(self.K_inv.shape))
+        print('K_x.shape' + str(self.K_x.shape))
+        print('K_xK.shape' + str(self.K_xK.shape))
+        print(self.n_shown_padded)
+        print(self.n_predict_padded)
         cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, self.n_shown_padded, self.n_predict_padded, self.n_shown_padded,
                            alpha, self.K_inv_gpu, self.n_shown_padded, self.K_x_gpu, self.n_shown_padded, beta, self.K_xK_gpu,
                            self.n_shown_padded)
@@ -355,8 +368,11 @@ class GaussianProcessGPU:
 if __name__ == "__main__":
     # Load image features
     feat = np.asfarray(np.load("../../data/cl25000.npy"), dtype="float32")
-    feedback = np.array(np.random.random(33))
-    gaussianProcess = GaussianProcessGPU(feat, feedback, np.arange(len(feedback), dtype="int32"))
+    feedback = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    feedback_idx = [7025, 14522, 24818, 657, 13478, 4601, 21410, 23775, 10850, 16573, 23139, 17426]
+    #feedback = np.array(np.random.random(33))
+    #feedback_idx = np.arange(len(feedback))
+    gaussianProcess = GaussianProcessGPU(feat, feedback, feedback_idx)
     gaussianProcess.gaussian_process(debug=False)
     print(np.shape(gaussianProcess.get_mean()))
     print(np.shape(gaussianProcess.get_variance()))
