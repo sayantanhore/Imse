@@ -220,19 +220,30 @@ class GaussianProcessGPU:
         if self.n_shown < self.n_shown_padded:  # If padded array has room left, add to it
             self.feedback[self.n_shown] = self.float_type(user_feedback)  # Update feedback vector
             self.shown_idx[self.n_shown] = self.int_type(feedback_idx)  # Update shown idx vector
+            self.K_noise[self.n_shown] = self.float_type(np.random.random())
             self.n_shown += 1
         else:  # Padded arrays are full, so create new padded arrays one blocksize larger before adding values.
             self.feedback_gpu.free()
             self.shown_idx_gpu.free()
+            self.K_noise_gpu.free()
             self.n_shown += 1
             self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)
-            self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-            self.shown_idx = pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-            self.feedback[self.n_shown - 1] = user_feedback
-            self.shown_idx[self.n_shown - 1] = feedback_idx
+
+            self.feedback = pad_vector(self.feedback, self.n_shown - 1, self.n_shown_padded, dtype=self.float_type)
+            self.shown_idx = pad_vector(self.shown_idx, self.n_shown - 1, self.n_shown_padded, dtype=self.float_type)
+            self.K_noise = pad_vector(self.K_noise, self.n_shown - 1, self.n_shown_padded, dtype=self.float_type)
+
+            self.feedback[self.n_shown - 1] = self.float_type(user_feedback)
+            self.shown_idx[self.n_shown - 1] = self.float_type(feedback_idx)
+            self.K_noise[self.n_shown - 1] = self.float_type(np.random.random())
+
+            self.shown_idx_gpu = drv.mem_alloc(self.shown_idx.nbytes)
+            self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
+            self.K_noise_gpu = drv.mem_alloc(self.K_noise.nbytes)
         # TODO: Add check for correct values (datatype, dimensions)
         drv.memcpy_htod(self.feedback_gpu, self.feedback)
         drv.memcpy_htod(self.shown_idx_gpu, self.shown_idx)
+        drv.memcpy_htod(self.K_noise_gpu, self.K_noise)
 
     def round_up_to_blocksize(self, num):
         if num % self.block_size[0] != 0:
@@ -240,6 +251,8 @@ class GaussianProcessGPU:
         return self.int_type(num)
 
     def gaussian_process(self, debug=False):
+        tmp_K = np.zeros(self.K.shape, dtype=self.float_type)
+        drv.memcpy_htod(self.K_gpu, tmp_K)
         self.calc_K()
         if debug:
             K_test_features = np.asfarray([self.img_features[i] for i in self.shown_idx], dtype=self.float_type)
@@ -253,11 +266,11 @@ class GaussianProcessGPU:
         if debug:
             drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
             K_x_test = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
-            for i, idx1 in enumerate(self.predict_idx):
-                for j, idx2 in enumerate(self.shown_idx):
-                    vdist = distance(self.img_features[idx1], self.img_features[idx2]) / len(self.img_features[0])
-                    K_x_test[i][j] = vdist
-            check_result('K_x', self.K_x[:self.n_predict, :self.n_shown], K_x_test[:self.n_predict, :self.n_shown])
+            #for i, idx1 in enumerate(self.predict_idx):
+            #    for j, idx2 in enumerate(self.shown_idx):
+            #        vdist = distance(self.img_features[idx1], self.img_features[idx2]) / len(self.img_features[0])
+            #        K_x_test[i][j] = vdist
+            #check_result('K_x', self.K_x[:self.n_predict, :self.n_shown], K_x_test[:self.n_predict, :self.n_shown])
 
         self.calc_K_xK()
         if debug:
@@ -265,6 +278,8 @@ class GaussianProcessGPU:
             K_xK_test = (np.matrix(self.K_x) * np.matrix(self.K_inv))
             check_result('K_xK', self.K_xK[:self.n_predict, :self.n_shown], K_xK_test[:self.n_predict, :self.n_shown])
 
+        tmp_K_xKK_x_T = np.zeros(self.diag_K_xKK_x_T.shape, dtype=self.float_type)
+        drv.memcpy_htod(self.diag_K_xKK_x_T_gpu, tmp_K_xKK_x_T)
         self.calc_K_xKK_x_T()
         if debug:
             drv.memcpy_dtoh(self.diag_K_xKK_x_T, self.diag_K_xKK_x_T_gpu)
@@ -292,12 +307,9 @@ class GaussianProcessGPU:
         return self.ucb, self.mean
 
     def calc_K(self):
-        """
-        """
         grid_size_xy = (self.n_shown_padded + self.block_size[0] - 1) / self.block_size[0]
         grid_size_z = (self.n_features + self.block_size[2] - 1) / self.block_size[2]
         grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
-
 
         cuda_func = self.cuda_module.get_function("generate__K__")
         cuda_func(self.K_gpu, self.shown_idx_gpu, self.feat_gpu, self.K_noise_gpu, np.int32(self.n_shown_padded),
@@ -373,9 +385,11 @@ if __name__ == "__main__":
     #feedback = np.array(np.random.random(33))
     #feedback_idx = np.arange(len(feedback))
     gaussianProcess = GaussianProcessGPU(feat, feedback, feedback_idx)
-    gaussianProcess.gaussian_process(debug=False)
+    gaussianProcess.gaussian_process(debug=True)
     print(np.shape(gaussianProcess.get_mean()))
     print(np.shape(gaussianProcess.get_variance()))
-    gaussianProcess.add_feedback(0.7, 90)
-    print(np.shape(gaussianProcess.get_mean()))
-    print(np.shape(gaussianProcess.get_variance()))
+    for i in range(1, 50):
+        gaussianProcess.add_feedback(float(i)/10, 1 + i)
+        gaussianProcess.gaussian_process(debug=True)
+        print('Mean shape:', np.shape(gaussianProcess.get_mean()))
+        print('Variance shape:', np.shape(gaussianProcess.get_variance()))
