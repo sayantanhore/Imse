@@ -73,315 +73,251 @@ def allocate_gpu(array, type, size_x, size_y, size_z, copy=False):
         drv.memcpy_htod(array_gpu, array)
     return array_gpu
 
+def round_up_to_blocksize(num, block_size, int_type):
+    if num % block_size[0] != 0:
+        return num + (block_size[0] - (num % block_size[0]))
+    return int_type(num)
 
-class GaussianProcessGPU:
-    """
-    Gaussian process class, which uses GPU for the distance and matrix calculations. This implementation is not
-    thoroughly tested, for example large imagesets will probably cause it to fail.
+def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, int_type=np.int32,
+                     kernel_file=FILE_ROOT_PATH + 'Intelligence/GPSOM/kernels.c', debug=False):
+    print("Initialized starts")
+    print("Loading test data")
+    with open('feedback.txt') as infile:
+        feedback = np.loadtxt(infile)
+    with open('feat.txt') as infile:
+        data = np.loadtxt(infile)
+    with open('feedback_idx.txt') as infile:
+        feedback_indices = np.loadtxt(infile)
+    import pycuda.autoinit
+    np.set_printoptions(linewidth=500)
+    print(feedback)
+    feedback_indices = feedback_indices.tolist()
+    print(feedback_indices)
+    print(data.shape)
+    print(feedback_indices[0])
+    print(len(feedback_indices))
+    print(type(feedback_indices))
+    float_type = float_type
+    int_type = int_type
+    block_size = (16, 16, 4)
+    n_features = np.size(data, 1)  # TODO: Assuming the n_features is divisible by block_size[2]
+    print("Start from here")
+    #print(kernel_file
+    cuda_source = open(kernel_file, 'r').read()
+    print("len cuda_source" + str(len(cuda_source)))
+    try:
+        cuda_module = SourceModule(cuda_source)
+    except Exception as e:
+        print(e)
+    print("Check zero")
+    
+    # Inialize variables
+    # Pad everything to match block size
+    # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
+    data = np.asfarray(np.vstack(([np.zeros(n_features)], data)), dtype=float_type)
+    n_total = np.size(data, 0)
+    n_total_padded = round_up_to_blocksize(n_total, block_size, int_type)  # Pad to match block size
+    n_feedback = np.size(feedback_indices, 0)
+    n_feedback_padded = round_up_to_blocksize(n_feedback, block_size, int_type)  # Pad to match block size
+    n_predict = int_type(n_total - n_feedback)
+    n_predict_padded = round_up_to_blocksize(n_predict, block_size, int_type)
+    feedback_indices = np.asarray(feedback_indices, dtype=int_type)
+    feedback_indices = pad_vector(feedback_indices, n_feedback, n_feedback_padded, dtype=int_type)
+    predict_indices = np.arange(0, n_predict, dtype=int_type)  # TODO: wut?
+    predict_indices = pad_vector(predict_indices, n_predict, n_predict_padded)
+    K = np.zeros((n_feedback_padded, n_feedback_padded), dtype=float_type)
+    K_x = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
+    K_xK = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
+    K_noise = cumath.np.random.normal(1, 0.1, n_feedback)  # Generate diagonal noise
+    K_noise = pad_vector(K_noise, n_feedback, n_feedback_padded, dtype=float_type)
+    K_inv = np.asfarray(K, dtype=float_type)
+    diag_K_xx = cumath.np.random.normal(1, 0.1, n_predict)
+    diag_K_xx = pad_vector(diag_K_xx, n_predict, n_predict_padded, dtype=float_type)
+    diag_K_xKK_x_T = np.zeros((1, n_predict_padded), dtype=float_type)
+    variance = np.zeros((1, n_predict_padded), dtype=float_type)
+    feedback = np.array(feedback)
+    feedback = pad_vector(feedback, n_feedback, n_feedback_padded, dtype=float_type)
+    mean = np.zeros((1, n_predict_padded), dtype=float_type)
+    ucb = np.zeros((1, n_predict_padded), dtype=float_type)
+    print("Check one")
+    
+    # Allocate GPU memory and copy data, check datatype before each allocation
+    # TODO: add dimension checking
+    check_type(data, float_type)
+    print(data.shape)
+    feat_gpu = drv.mem_alloc(data.nbytes)
+    drv.memcpy_htod(feat_gpu, data)
+    check_type(feedback_indices, int_type)
+    feedback_indices_gpu = drv.mem_alloc(feedback_indices.nbytes)
+    drv.memcpy_htod(feedback_indices_gpu, feedback_indices)
+    check_type(K, float_type)
+    K_gpu = drv.mem_alloc(K.nbytes)
+    drv.memcpy_htod(K_gpu, K)
+    check_type(K_inv, float_type)
+    K_inv_gpu = drv.mem_alloc(K_inv.nbytes)
+    check_type(K_noise, float_type)
+    K_noise_gpu = drv.mem_alloc(K_noise.nbytes)
+    drv.memcpy_htod(K_noise_gpu, K_noise)
+    check_type(K_x, float_type)
+    K_x_gpu = drv.mem_alloc(K_x.nbytes)
+    drv.memcpy_htod(K_x_gpu, K_x)
+    check_type(predict_indices, int_type)
+    predict_idx_gpu = drv.mem_alloc(predict_indices.nbytes)
+    drv.memcpy_htod(predict_idx_gpu, predict_indices)
+    check_type(K_xK, float_type)
+    K_xK_gpu = drv.mem_alloc(K_xK.nbytes)
+    check_type(diag_K_xx, float_type)
+    diag_K_xx_gpu = drv.mem_alloc(diag_K_xx.nbytes)
+    drv.memcpy_htod(diag_K_xx_gpu, diag_K_xx)
+    check_type(diag_K_xKK_x_T, float_type)
+    diag_K_xKK_x_T_gpu = drv.mem_alloc(diag_K_xKK_x_T.nbytes)
+    drv.memcpy_htod(diag_K_xKK_x_T_gpu, diag_K_xKK_x_T)
+    check_type(variance, float_type)
+    variance_gpu = drv.mem_alloc(variance.nbytes)
+    check_type(feedback, float_type)
+    feedback_gpu = drv.mem_alloc(feedback.nbytes)
+    drv.memcpy_htod(feedback_gpu, feedback)
+    check_type(mean, float_type)
+    mean_gpu = drv.mem_alloc(mean.nbytes)
+    check_type(ucb, float_type)
+    ucb_gpu = drv.mem_alloc(ucb.nbytes)
 
-    Constructing GaussianProcessGPU object:
-    GaussianProcessGPU(img_features, feedback, img_shown_idx, block_size=(16, 16, 4))
+    calc_K()
+    if debug:
+        K_test_features = np.asfarray([data[i] for i in feedback_indices], dtype=float_type)
+        K_test = dist.cdist(K_test_features, K_test_features, 'cityblock') / n_features + np.diag(K_noise)
+        drv.memcpy_dtoh(K, K_gpu)
+        check_result('K', K[:n_feedback, :n_feedback], K_test[:n_feedback, :n_feedback])
 
-    Parameters:
-        img_features is a 2D array, each row containing float features for one image.
-        feedback is a vector containing at least one initial observation as a float
-        img_shown_idx is a vector containing the indexes of the images for which feedback was given in the feedback
-            vector
-        block_size is the block size used in the GPU kernel calls. Don't change unless you know what you're doing.
-        float_type defines which numpy float type is used (tested with float32, may or may not work with float64)
-        int_type defines which numpy int type is used (tested with int32, may or may not work with int64)
-        kernel_file is the file from which GPU kernels are read.
-    """
-
-    def __init__(self, img_features, feedback, img_shown_idx, block_size=(16, 16, 4), float_type=np.float32,
-                 int_type=np.int32, kernel_file=FILE_ROOT_PATH + 'Intelligence/GPSOM/kernels.c'):
-        print("Initialized starts")
-        with open('feedback.txt') as infile:
-            feedback = np.loadtxt(infile)
-        with open('feat.txt') as infile:
-            img_features = np.loadtxt(infile)
-        with open('feedback_idx.txt') as infile:
-            img_shown_idx = np.loadtxt(infile)
-        import pycuda.autoinit
-        np.set_printoptions(linewidth=500)
-        print(feedback)
-        img_shown_idx = img_shown_idx.tolist()
-        print(img_shown_idx)
-        print(img_features.shape)
-        print(img_shown_idx[0])
-        print(len(img_shown_idx))
-        print(type(img_shown_idx))
-        self.float_type = float_type
-        self.int_type = int_type
-        self.block_size = block_size
-        self.n_features = np.size(img_features, 1)  # TODO: Assuming the n_features is divisible by block_size[2], fix
-        print("Start from here")
-        #print(kernel_file
-        cuda_source = open(kernel_file, 'r').read()
-        print("len cuda_source" + str(len(cuda_source)))
-        try:
-            self.cuda_module = SourceModule(cuda_source)
-        except Exception as e:
-            print(e)
-        print("Check zero")
-        # Inialize variables
-        # Pad everything to match block size
-        # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
-        self.img_features = np.asfarray(np.vstack(([np.zeros(self.n_features)], img_features)), dtype=self.float_type)
-        self.n_total = np.size(self.img_features, 0)
-        self.n_shown = np.size(img_shown_idx, 0)
-        self.n_total_padded = self.round_up_to_blocksize(self.n_total)  # Pad to match block size
-        self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)  # Pad to match block size
-        self.n_predict = self.int_type(self.n_total - self.n_shown)
-        self.n_predict_padded = self.round_up_to_blocksize(self.n_predict)
-        self.shown_idx = np.asarray(img_shown_idx, dtype=self.int_type)
-        self.shown_idx = pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.int_type)
-        self.predict_idx = np.arange(0, self.n_predict, dtype=self.int_type)
-        self.predict_idx = pad_vector(self.predict_idx, self.n_predict, self.n_predict_padded)
-        self.K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
-        self.K_x = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
-        self.K_xK = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
-        self.K_noise = cumath.np.random.normal(1, 0.1, self.n_shown)  # Generate diagonal noise
-        self.K_noise = pad_vector(self.K_noise, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-        self.K_inv = np.asfarray(self.K, dtype=self.float_type)
-        self.diag_K_xx = cumath.np.random.normal(1, 0.1, self.n_predict)
-        self.diag_K_xx = pad_vector(self.diag_K_xx, self.n_predict, self.n_predict_padded, dtype=self.float_type)
-        self.diag_K_xKK_x_T = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-        self.variance = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-        self.feedback = np.array(feedback)
-        self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-        self.mean = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-        self.ucb = np.zeros((1, self.n_predict_padded), dtype=self.float_type)
-        print("Check one")
-        # Allocate GPU memory and copy data, check datatype before each allocation
-        # TODO: add dimension checking
-        check_type(self.img_features, self.float_type)
-        print(self.img_features.shape)
-        self.feat_gpu = drv.mem_alloc(self.img_features.nbytes)
-        drv.memcpy_htod(self.feat_gpu, self.img_features)
-        check_type(self.shown_idx, self.int_type)
-        self.shown_idx_gpu = drv.mem_alloc(self.shown_idx.nbytes)
-        drv.memcpy_htod(self.shown_idx_gpu, self.shown_idx)
-        check_type(self.K, self.float_type)
-        self.K_gpu = drv.mem_alloc(self.K.nbytes)
-        drv.memcpy_htod(self.K_gpu, self.K)
-        check_type(self.K_inv, self.float_type)
-        self.K_inv_gpu = drv.mem_alloc(self.K_inv.nbytes)
-        check_type(self.K_noise, self.float_type)
-        self.K_noise_gpu = drv.mem_alloc(self.K_noise.nbytes)
-        drv.memcpy_htod(self.K_noise_gpu, self.K_noise)
-        check_type(self.K_x, self.float_type)
-        self.K_x_gpu = drv.mem_alloc(self.K_x.nbytes)
-        drv.memcpy_htod(self.K_x_gpu, self.K_x)
-        check_type(self.predict_idx, self.int_type)
-        self.predict_idx_gpu = drv.mem_alloc(self.predict_idx.nbytes)
-        drv.memcpy_htod(self.predict_idx_gpu, self.predict_idx)
-        check_type(self.K_xK, self.float_type)
-        self.K_xK_gpu = drv.mem_alloc(self.K_xK.nbytes)
-        check_type(self.diag_K_xx, self.float_type)
-        self.diag_K_xx_gpu = drv.mem_alloc(self.diag_K_xx.nbytes)
-        drv.memcpy_htod(self.diag_K_xx_gpu, self.diag_K_xx)
-        check_type(self.diag_K_xKK_x_T, self.float_type)
-        self.diag_K_xKK_x_T_gpu = drv.mem_alloc(self.diag_K_xKK_x_T.nbytes)
-        drv.memcpy_htod(self.diag_K_xKK_x_T_gpu, self.diag_K_xKK_x_T)
-        check_type(self.variance, self.float_type)
-        self.variance_gpu = drv.mem_alloc(self.variance.nbytes)
-        check_type(self.feedback, self.float_type)
-        self.feedback_gpu = drv.mem_alloc(self.feedback.nbytes)
-        drv.memcpy_htod(self.feedback_gpu, self.feedback)
-        check_type(self.mean, self.float_type)
-        self.mean_gpu = drv.mem_alloc(self.mean.nbytes)
-        check_type(self.ucb, self.float_type)
-        self.ucb_gpu = drv.mem_alloc(self.ucb.nbytes)
-
-    #def __del__(self):
-        #self.context.pop()
-
-    def get_variance(self):
-        drv.memcpy_dtoh(self.variance, self.variance_gpu)
-        return self.variance
-
-    def get_mean(self):
-        drv.memcpy_dtoh(self.mean, self.mean_gpu)
-        return self.mean
-
-    def get_ucb(self):
-        drv.memcpy_dtoh(self.ucb, self.ucb_gpu)
-        return self.ucb
-
-    def add_feedback(self, user_feedback, feedback_idx):
-        """
-        Add a feedback value into the feedback vector and the index of the image for which feedback was given
-        to the shown images vector.
-
-        Parameters:
-            user_feedback is the feedback value from user (float)
-            feedback_idx is the index of the image for which the feedback was given
-        """
-        # TODO: Add cuda operation success checks?
-        drv.memcpy_dtoh(self.feedback, self.feedback_gpu)
-        drv.memcpy_dtoh(self.shown_idx, self.shown_idx_gpu)
-        if self.n_shown < self.n_shown_padded:  # If padded array has room left, add to it
-            self.feedback[self.n_shown] = self.float_type(user_feedback)  # Update feedback vector
-            self.shown_idx[self.n_shown] = self.int_type(feedback_idx)  # Update shown idx vector
-            self.n_shown += 1
-        else:  # Padded arrays are full, so create new padded arrays one blocksize larger before adding values.
-            self.feedback_gpu.free()
-            self.shown_idx_gpu.free()
-            self.n_shown += 1
-            self.n_shown_padded = self.round_up_to_blocksize(self.n_shown)
-            self.feedback = pad_vector(self.feedback, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-            self.shown_idx = pad_vector(self.shown_idx, self.n_shown, self.n_shown_padded, dtype=self.float_type)
-            self.feedback[self.n_shown - 1] = user_feedback
-            self.shown_idx[self.n_shown - 1] = feedback_idx
-        # TODO: Add check for correct values (datatype, dimensions)
-        drv.memcpy_htod(self.feedback_gpu, self.feedback)
-        drv.memcpy_htod(self.shown_idx_gpu, self.shown_idx)
-
-    def round_up_to_blocksize(self, num):
-        if num % self.block_size[0] != 0:
-            return num + (self.block_size[0] - (num % self.block_size[0]))
-        return self.int_type(num)
-
-    def gaussian_process(self, debug=False):
-        self.calc_K()
-        if debug:
-            K_test_features = np.asfarray([self.img_features[i] for i in self.shown_idx], dtype=self.float_type)
-            K_test = dist.cdist(K_test_features, K_test_features, 'cityblock') / self.n_features + np.diag(self.K_noise)
-            drv.memcpy_dtoh(self.K, self.K_gpu)
-            #check_result('K', self.K[:self.n_shown, :self.n_shown], K_test[:self.n_shown, :self.n_shown])
-
-        self.invert_K()
-        self.calc_K_x()
-        if debug:
-            drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
-            K_x_test = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
-#            for i, idx1 in enumerate(self.predict_idx):
-#                for j, idx2 in enumerate(self.shown_idx):
-#                    vdist = distance(self.img_features[idx1], self.img_features[idx2]) / len(self.img_features[0])
+    invert_K()
+    calc_K_x()
+    if debug:
+        drv.memcpy_dtoh(K_x, K_x_gpu)
+        K_x_test = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
+#            for i, idx1 in enumerate(predict_idx):
+#                for j, idx2 in enumerate(shown_idx):
+#                    vdist = distance(img_features[idx1], img_features[idx2]) / len(img_features[0])
 #                    K_x_test[i][j] = vdist
-            #check_result('K_x', self.K_x[:self.n_predict, :self.n_shown], K_x_test[:self.n_predict, :self.n_shown])
+        #check_result('K_x', K_x[:n_predict, :n_feedback], K_x_test[:n_predict, :n_feedback])
 
-        self.calc_K_xK()
-        if debug:
-            drv.memcpy_dtoh(self.K_xK, self.K_xK_gpu)
-            K_xK_test = (np.matrix(self.K_x) * np.matrix(self.K_inv))
-            check_result('K_xK', self.K_xK[:self.n_predict, :self.n_shown], K_xK_test[:self.n_predict, :self.n_shown])
+    calc_K_xK()
+    if debug:
+        drv.memcpy_dtoh(K_xK, K_xK_gpu)
+        K_xK_test = (np.matrix(K_x) * np.matrix(K_inv))
+        check_result('K_xK', K_xK[:n_predict, :n_feedback], K_xK_test[:n_predict, :n_feedback])
 
-        self.calc_K_xKK_x_T()
-        if debug:
-            drv.memcpy_dtoh(self.diag_K_xKK_x_T, self.diag_K_xKK_x_T_gpu)
-            K_xKK_x_T_test = np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)
-            check_result("K_xKK_x_T", self.diag_K_xKK_x_T, K_xKK_x_T_test)
-        print("K_xKK_xT")
+    calc_K_xKK_x_T()
+    if debug:
+        drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
+        K_xKK_x_T_test = np.diag(np.matrix(K_xK) * np.matrix(K_x).T)
+        check_result("K_xKK_x_T", diag_K_xKK_x_T, K_xKK_x_T_test)
+    print("K_xKK_xT")
 
-        self.calc_variance()
-        if debug:
-            drv.memcpy_dtoh(self.variance, self.variance_gpu)
-            variance_test = np.sqrt(
-                np.abs(np.subtract(self.diag_K_xx[:self.n_predict], self.diag_K_xKK_x_T[:, :self.n_predict])))
-            check_result('Variance', self.variance[:, :self.n_predict], variance_test[:, :self.n_predict])
+    calc_variance()
+    if debug:
+        drv.memcpy_dtoh(variance, variance_gpu)
+        variance_test = np.sqrt(
+            np.abs(np.subtract(diag_K_xx[:n_predict], diag_K_xKK_x_T[:, :n_predict])))
+        check_result('Variance', variance[:, :n_predict], variance_test[:, :n_predict])
 
-        self.calc_mean()
-        if debug:
-            drv.memcpy_dtoh(self.mean, self.mean_gpu)
-            mean_test = np.dot(self.K_xK, self.feedback)  # This is 1D, self.mean is 2D, so slicing for test differs
-            check_result('Mean', self.mean[:, :self.n_predict], mean_test[:self.n_predict])
+    calc_mean()
+    if debug:
+        drv.memcpy_dtoh(mean, mean_gpu)
+        mean_test = np.dot(K_xK, feedback)  # This is 1D, mean is 2D, so slicing for test differs
+        check_result('Mean', mean[:, :n_predict], mean_test[:n_predict])
 
-        self.calc_UCB()
-        if debug:
-            drv.memcpy_dtoh(self.ucb, self.ucb_gpu)
-            ucb_test = np.add(self.mean, self.variance)  # The array shapes differ a bit, so slicing is different
-            check_result('UCB', self.ucb[:self.n_predict, :], ucb_test[:self.n_predict])
-        print("Returning from GP-CUDA")
-        return self.ucb, self.mean
+    calc_UCB()
+    if debug:
+        drv.memcpy_dtoh(ucb, ucb_gpu)
+        ucb_test = np.add(mean, variance)  # The array shapes differ a bit, so slicing is different
+        check_result('UCB', ucb[:n_predict, :], ucb_test[:n_predict])
+    print("Returning from GP-CUDA")
+    return ucb, mean
 
-    def calc_K(self):
-        """
-        """
-        grid_size_xy = (self.n_shown_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size_z = (self.n_features + self.block_size[2] - 1) / self.block_size[2]
-        grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
 
-        cuda_func = self.cuda_module.get_function("generate__K__")
-        cuda_func(self.K_gpu, self.shown_idx_gpu, self.feat_gpu, self.K_noise_gpu, np.int32(self.n_shown_padded),
-                  np.int32(self.n_features), block = self.block_size, grid = grid_size)
+def calc_K(cuda_module, block_size, n_features, n_feedback_padded, data_gpu, feedback_indices_gpu, K_noise_gpu, K_gpu):
+    """
+    """
+    grid_size_xy = (n_feedback_padded + block_size[0] - 1) / block_size[0]
+    grid_size_z = (n_features + block_size[2] - 1) / block_size[2]
+    grid_size = (grid_size_xy, grid_size_xy, grid_size_z)
 
-    def invert_K(self):
-        K = np.zeros((self.n_shown_padded, self.n_shown_padded), dtype=self.float_type)
-        drv.memcpy_dtoh(K, self.K_gpu)
-        tmp = cumath.np.linalg.inv(K[:self.n_shown, :self.n_shown])
-        self.K_inv[:tmp.shape[0], :tmp.shape[1]] = tmp
-        drv.memcpy_htod(self.K_inv_gpu, self.K_inv)
+    cuda_func = cuda_module.get_function("generate__K__")
+    cuda_func(K_gpu, feedback_indices_gpu, data_gpu, K_noise_gpu, np.int32(n_feedback_padded),
+              np.int32(n_features), block=block_size, grid=grid_size)
 
-    def calc_K_x(self):
-        grid_size_x = (self.n_shown_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size_y = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size_z = (self.n_features + self.block_size[2] - 1) / self.block_size[2]
-        grid_size = (grid_size_x, grid_size_y, grid_size_z)
+def invert_K():
+    K = np.zeros((n_feedback_padded, n_feedback_padded), dtype=float_type)
+    drv.memcpy_dtoh(K, K_gpu)
+    tmp = cumath.np.linalg.inv(K[:n_feedback, :n_feedback])
+    K_inv[:tmp.shape[0], :tmp.shape[1]] = tmp
+    drv.memcpy_htod(K_inv_gpu, K_inv)
 
-        cuda_func = self.cuda_module.get_function("generate__K_x__")
-        cuda_func(self.K_x_gpu, self.shown_idx_gpu, self.predict_idx_gpu, self.feat_gpu, np.int32(self.n_shown_padded),
-                  np.int32(self.n_predict_padded), np.int32(self.n_features), block=self.block_size, grid=grid_size)
+def calc_K_x():
+    grid_size_x = (n_feedback_padded + block_size[0] - 1) / block_size[0]
+    grid_size_y = (n_predict_padded + block_size[0] - 1) / block_size[0]
+    grid_size_z = (n_features + block_size[2] - 1) / block_size[2]
+    grid_size = (grid_size_x, grid_size_y, grid_size_z)
 
-    def calc_K_xK(self):
-        h = cublas.cublasCreate()
-        #cublas.cublasCheckStatus(h)
-        CUBLAS_OP_N = 0
-        alpha = 1.0
-        beta = 0.0
-        drv.memcpy_dtoh(self.K_inv, self.K_inv_gpu)
-        drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
-        print('K_inv.shape' + str(self.K_inv.shape))
-        print('K_x.shape' + str(self.K_x.shape))
-        print('K_xK.shape' + str(self.K_xK.shape))
-        print(self.n_shown_padded)
-        print(self.n_predict_padded)
+    cuda_func = cuda_module.get_function("generate__K_x__")
+    cuda_func(K_x_gpu, shown_idx_gpu, predict_idx_gpu, feat_gpu, np.int32(n_feedback_padded),
+              np.int32(n_predict_padded), np.int32(n_features), block=block_size, grid=grid_size)
 
-        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, self.n_shown_padded, self.n_predict_padded, self.n_shown_padded,
-                           alpha, self.K_inv_gpu, self.n_shown_padded, self.K_x_gpu, self.n_shown_padded, beta,
-                           self.K_xK_gpu, self.n_shown_padded)
-        print('moo')
-        cublas.cublasDestroy(h)
+def calc_K_xK():
+    h = cublas.cublasCreate()
+    #cublas.cublasCheckStatus(h)
+    CUBLAS_OP_N = 0
+    alpha = 1.0
+    beta = 0.0
+    drv.memcpy_dtoh(K_inv, K_inv_gpu)
+    drv.memcpy_dtoh(K_x, K_x_gpu)
+    print('K_inv.shape' + str(K_inv.shape))
+    print('K_x.shape' + str(K_x.shape))
+    print('K_xK.shape' + str(K_xK.shape))
+    print(n_feedback_padded)
+    print(n_predict_padded)
 
-    def calc_K_xKK_x_T(self):
-        grid_size_x = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size = (grid_size_x, 1, 1)
-        cuda_func = self.cuda_module.get_function("matMulDiag")
-        cuda_func(self.K_xK_gpu, self.K_x_gpu, self.diag_K_xKK_x_T_gpu, np.int32(self.n_predict_padded),
-                  np.int32(self.n_shown_padded), block=(self.block_size[0], 1, 1), grid=grid_size)
+    cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, n_feedback_padded, n_predict_padded, n_feedback_padded,
+                       alpha, K_inv_gpu, n_feedback_padded, K_x_gpu, n_feedback_padded, beta,
+                       K_xK_gpu, n_feedback_padded)
+    print('moo')
+    cublas.cublasDestroy(h)
 
-    def calc_variance(self):
-        grid_size_x = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size = (grid_size_x, 1, 1)
-        cuda_func = self.cuda_module.get_function("generate__variance__")
-        cuda_func(self.variance_gpu, self.diag_K_xx_gpu, self.diag_K_xKK_x_T_gpu, self.n_predict_padded,
-                  block=(self.block_size[0], 1, 1), grid=grid_size)
+def calc_K_xKK_x_T():
+    grid_size_x = (n_predict_padded + block_size[0] - 1) / block_size[0]
+    grid_size = (grid_size_x, 1, 1)
+    cuda_func = cuda_module.get_function("matMulDiag")
+    cuda_func(K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu, np.int32(n_predict_padded),
+              np.int32(n_feedback_padded), block=(block_size[0], 1, 1), grid=grid_size)
 
-    def calc_mean(self):
-        h = cublas.cublasCreate()
-        CUBLAS_OP_N = 0
-        alpha = 1.0
-        beta = 0.0
-        cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, self.n_predict_padded, self.n_shown_padded, alpha,
-                           self.feedback_gpu, 1, self.K_xK_gpu, self.n_shown_padded, beta, self.mean_gpu, 1)
-        cublas.cublasDestroy(h)
+def calc_variance():
+    grid_size_x = (n_predict_padded + block_size[0] - 1) / block_size[0]
+    grid_size = (grid_size_x, 1, 1)
+    cuda_func = cuda_module.get_function("generate__variance__")
+    cuda_func(variance_gpu, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, n_predict_padded,
+              block=(block_size[0], 1, 1), grid=grid_size)
 
-    def calc_UCB(self):
-        grid_size_x = (self.n_predict_padded + self.block_size[0] - 1) / self.block_size[0]
-        grid_size = (grid_size_x, 1, 1)
-        cuda_func = self.cuda_module.get_function("generate__UCB__")
-        cuda_func(self.ucb_gpu, self.mean_gpu, self.variance_gpu, block=(self.block_size[0], 1, 1), grid=grid_size)
+def calc_mean():
+    h = cublas.cublasCreate()
+    CUBLAS_OP_N = 0
+    alpha = 1.0
+    beta = 0.0
+    cublas.cublasSgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, 1, n_predict_padded, n_feedback_padded, alpha,
+                       feedback_gpu, 1, K_xK_gpu, n_feedback_padded, beta, mean_gpu, 1)
+    cublas.cublasDestroy(h)
+
+def calc_UCB():
+    grid_size_x = (n_predict_padded + block_size[0] - 1) / block_size[0]
+    grid_size = (grid_size_x, 1, 1)
+    cuda_func = cuda_module.get_function("generate__UCB__")
+    cuda_func(ucb_gpu, mean_gpu, variance_gpu, block=(block_size[0], 1, 1), grid=grid_size)
 
 
 if __name__ == "__main__":
     # Load image features
     feat = np.asfarray(np.load("../../../../data/Data/cl25000.npy"), dtype="float32")
     feedback = np.array(np.random.random(33))
-    gaussianProcess = GaussianProcessGPU(feat, feedback, np.arange(len(feedback), dtype="int32"))
-    gaussianProcess.gaussian_process(debug=False)
-    print(np.shape(gaussianProcess.get_mean()))
-    print(np.shape(gaussianProcess.get_variance()))
-    gaussianProcess.add_feedback(0.7, 90)
-    print(np.shape(gaussianProcess.get_mean()))
-    print(np.shape(gaussianProcess.get_variance()))
+    mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"))
+    print(np.shape(mean))
+    print(np.shape(ucb))
+

@@ -18,7 +18,7 @@ class GPSOM(object):
         self.iteration = 0  # TODO: use this to change the exploration/exploitation ratio
         self.gp = None
         self.selected_images = []
-        print "Haha"
+        print("Haha")
     
     def FirstRound(self):
         """Pre-processing stage - sample first set of images
