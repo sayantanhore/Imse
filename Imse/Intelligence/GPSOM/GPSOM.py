@@ -33,17 +33,14 @@ class GPSOM(object):
         print "Inside predict"
         self.feedback = self.feedback + feedback
         print "Before cuda initialization"
-        if not self.gp:
-            self.gp = gp_cuda.GaussianProcessGPU(self.image_features,
-                                                 self.feedback,
-                                                 self.shown_images)
         print("After cuda initialization")
         # What this method returns
         images = []
         # Copy all the values that will be used as they have to be modified only within iteration
         # Current training set with images and feedback and clusters assignments
         print "Before calling gaussian process"
-        ucb, mean = self.gp.gaussian_process(debug=True)
+        mean, variance = gp_cuda.gaussian_process(self.image_features, self.feedback, self.feedback_indices)
+        ucb = np.add(mean, variance)
         print "After calling gaussian process"
         if num_predictions == 1:
             chosen_image_indices = [ucb.argmax()]
