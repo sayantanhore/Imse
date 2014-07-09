@@ -4,6 +4,7 @@ import random
 import copy
 import GP
 import math
+import numpy as np
 from Intelligence.path.Path import *
 
 class MLDist(object):
@@ -84,7 +85,6 @@ class MLDist(object):
         datapoints_predict = self.clusters_names
 
         #insert distance metric learning here---------------
-        import numpy as np
         features = np.arange(len(self.images_shown)*4096)
         features.shape=(len(self.images_shown),4096)
         #USEFULS: self.feedback vector, self.images_shown
@@ -96,7 +96,7 @@ class MLDist(object):
             features += featvec
 
         #recalculate distancematrix (was called 'data' in Sayantan's code)
-        self.distancematrix = RelDist( features )
+        self.distancematrix = self.GetRelDistances( features )
         self.GP.data = self.distancematrix #poorly named, and you should add the GP again to MLDists folder
         #end insert----------------------------------------
 
@@ -119,5 +119,16 @@ class MLDist(object):
 
         return self.chosen_image
 
-    def RelDist(features): #get code from Lasse
-        self.distancematrix =
+    def GetRelDistances(features): #got code from Lasse
+        self.distancematrix = s
+        #Feature significance calculation
+        chosen_images = np.array([self.image_features[i] for i in self.feedback_indices])
+        weights = np.expand_dims(self.feedback, axis=1)
+        weighted_mean = np.mean(np.multiply(weights, chosen_images), axis=0)
+        weighted_variance = np.sum(np.square(np.subtract(chosen_images, weighted_mean)), axis=0)
+        significance = np.subtract(1, np.divide(weighted_variance, self.variance))
+
+        # Distance calculation
+        signif_chosen_images = np.multiply(significance, chosen_images)
+        distances = dist.cdist(signif_chosen_images, signif_chosen_images)
+        return distances
