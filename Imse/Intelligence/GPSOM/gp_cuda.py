@@ -12,7 +12,7 @@ import scikits.cuda.linalg as linalg
 import numpy as np
 import scipy.spatial.distance as dist
 import pycuda.gpuarray as gpuarray
-
+import sys
 
 
 def distance(vector1, vector2, metric="manhattan"):
@@ -84,35 +84,34 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     if debug:
         print("Initialized starts")
         print("Loading test data")
+        np.set_printoptions(linewidth=500)
         with open('feedback.txt') as infile:
             feedback = np.loadtxt(infile)
-        with open('feat.txt') as infile:
-            data = np.loadtxt(infile)
         with open('feedback_idx.txt') as infile:
             feedback_indices = np.loadtxt(infile)
-        np.set_printoptions(linewidth=500)
-    import pycuda.autoinit
-    print(feedback)
+
+    with open('feat.txt') as infile:
+        data = np.loadtxt(infile)
     feedback_indices = feedback_indices.tolist()
-    print(feedback_indices)
-    print(data.shape)
-    print(feedback_indices[0])
-    print(len(feedback_indices))
-    print(type(feedback_indices))
+    import pycuda.autoinit
+    if debug:
+        print(feedback)
+        print(feedback_indices)
+        print(data.shape)
+        print(feedback_indices[0])
+        print(len(feedback_indices))
+        print(type(feedback_indices))
     float_type = float_type
     int_type = int_type
     block_size = (16, 16, 4)
     n_features = np.size(data, 1)  # TODO: Assuming the n_features is divisible by block_size[2]
-    print("Start from here")
     #print(kernel_file
     cuda_module = open(kernel_file, 'r').read()
-    print("len cuda_module" + str(len(cuda_module)))
     try:
         cuda_module = SourceModule(cuda_module)
     except Exception as e:
         print(e)
-    print("Check zero")
-    
+        return
     # Inialize variables
     # Pad everything to match block size
     # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
@@ -141,12 +140,10 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     feedback = pad_vector(feedback, n_feedback, n_feedback_padded, dtype=float_type)
     mean = np.zeros((1, n_predict_padded), dtype=float_type)
     ucb = np.zeros((1, n_predict_padded), dtype=float_type)
-    print("Check one")
-    
+
     # Allocate GPU memory and copy data, check datatype before each allocation
     # TODO: add dimension checking
     check_type(data, float_type)
-    print(data.shape)
     data_gpu = drv.mem_alloc(data.nbytes)
     drv.memcpy_htod(data_gpu, data)
     check_type(feedback_indices, int_type)
@@ -193,8 +190,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
 
     calc_K_x(cuda_module, block_size, n_feedback_padded, n_predict_padded, n_features, feedback_indices_gpu,
              predict_indices_gpu, data_gpu, K_x_gpu)
+    drv.memcpy_dtoh(K_x, K_x_gpu)
     if debug:
-        drv.memcpy_dtoh(K_x, K_x_gpu)
         K_x_test = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
 #        for i, idx1 in enumerate(predict_indices):
 #            for j, idx2 in enumerate(feedback_indices):
@@ -222,8 +219,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         check_result("K_xKK_x_T", diag_K_xKK_x_T, K_xKK_x_T_test)
 
     calc_variance(cuda_module, block_size, n_predict_padded, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, variance_gpu)
+    drv.memcpy_dtoh(variance, variance_gpu)
     if debug:
-        drv.memcpy_dtoh(variance, variance_gpu)
         variance_test = np.sqrt(
             np.abs(np.subtract(diag_K_xx[:n_predict], diag_K_xKK_x_T[:, :n_predict])))
         check_result('Variance', variance[:, :n_predict], variance_test[:, :n_predict])
@@ -333,9 +330,16 @@ if __name__ == "__main__":
     # Load image features
     #feat = np.asfarray(np.load("../../../../data/Data/cl25000.npy"), dtype="float32")
     feat = None
-    feedback = np.array(np.random.random(33))
-    mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"), debug=True)
 
-    print(np.shape(mean))
-    print(np.shape(ucb))
+    feedback = np.array(sys.stdin.readline().split('\t'), dtype=np.float32)
+    feedback_indices = np.array(sys.stdin.readline().split('\t'), dtype=np.float32)
 
+    mean, variance = gaussian_process(feat, feedback, feedback_indices, debug=False)
+
+    for value in mean:
+        sys.stdout.write(str(value) + '\t')
+    sys.stdout.write('\n')
+    for value in variance.flatten():
+        sys.stdout.write(str(value) + '\t')
+    sys.stdout.write('\n')
+    sys.exit(0)
