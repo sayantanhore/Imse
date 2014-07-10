@@ -91,13 +91,19 @@ class MLDist(object):
         #DO ONCE: for greater justice, combine all features into np.array
         features = np.zeros((4096,))
         featuresfolder = '/home/overfeat/features/'
-        for filenro in self.images_shown:
-            featvec = np.genfromtxt(featuresfolder+'cropdim%d.jpg.features' %(filenro), dtype = 'float', delimiter=" ",skip_header=1)
+
+        for i in range(1,25001):
+            featvec = np.genfromtxt('cropdim%d.jpg.features' %(i), dtype = 'float', delimiter=" ",skip_header=1)
             features = np.c_[features,featvec]
+        features = np.delete(features,0,1) #remove extra 0-column from the matrix
+        #for filenro in self.images_shown:
+        #    featvec = np.genfromtxt(featuresfolder+'cropdim%d.jpg.features' %(filenro), dtype = 'float', delimiter=" ",skip_header=1)
+        #    features = np.c_[features,featvec]
 
         featurefile = 'feats_numpy_dump'
         np.save(featurefile, features)
         #END DO ONCE
+
         self.image_features = np.load(featurefile)
         #recalculate distancematrix (was called 'data' in Sayantan's code)
         self.distance_matrix = self.GetRelDistances( features )
