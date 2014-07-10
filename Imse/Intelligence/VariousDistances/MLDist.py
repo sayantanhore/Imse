@@ -5,6 +5,7 @@ import copy
 import GP
 import math
 import numpy as np
+import scipy.spatial.distance as dist
 from Intelligence.path.Path import *
 
 class MLDist(object):
@@ -17,15 +18,16 @@ class MLDist(object):
         self.images_number = images_number_total
         self.clusters_number = (int(math.ceil(math.sqrt(math.sqrt(self.images_number)))))**2
         self.category = category
-        self.distancematrix = distancematrix
+        self.distance_matrix = distancematrix
         #self.clusters = pickle.load(open(DATA_PATH+'clusters-to-datapoints-cl-' + str(images_number_total)))
         self.clusters = clusters
         self.clusters_names = range(self.images_number, self.images_number + self.clusters_number)
         self.images_shown = firstround_images_shown
+        self.image_features
         self.previous_images = []
         self.feedback = []
         self.iteration = 0
-        self.gp = GP.GP(self.images_number, copy.deepcopy(self.images_shown), self.distancematrix)
+        self.gp = GP.GP(self.images_number, copy.deepcopy(self.images_shown), self.distance_matrix)
         self.selected_images = []
         self.chosen_model_vector = None
         self.index_chosen_image = None
@@ -85,19 +87,21 @@ class MLDist(object):
         datapoints_predict = self.clusters_names
 
         #insert distance metric learning here---------------
-        features = np.arange(len(self.images_shown)*4096)
-        features.shape=(len(self.images_shown),4096)
-        #USEFULS: self.feedback vector, self.images_shown
-        #fetch feature vectors based on images_shown. OPTIMIZE TO FETCH ONLY NEW IMAGES
+        #fetch feature vectors based on images_shown.
+        #DO ONCE: for greater justice, combine all features into np.array
+        features = np.zeros((4096,))
         featuresfolder = '/home/overfeat/features/'
-
         for filenro in self.images_shown:
-            featvec = np.genfromtxt(featuresfolder+'features%d' %(filenro), dtype = 'f8', delimiter=" ",skip_header=1)
-            features += featvec
+            featvec = np.genfromtxt(featuresfolder+'cropdim%d.jpg.features' %(filenro), dtype = 'float', delimiter=" ",skip_header=1)
+            features = np.c_[features,featvec]
 
+        featurefile = 'feats_numpy_dump'
+        np.save(featurefile, features)
+        #END DO ONCE
+        self.image_features = np.load(featurefile)
         #recalculate distancematrix (was called 'data' in Sayantan's code)
-        self.distancematrix = self.GetRelDistances( features )
-        self.GP.data = self.distancematrix #poorly named, and you should add the GP again to MLDists folder
+        self.distance_matrix = self.GetRelDistances( features )
+        self.GP.data = self.distance_matrix #poorly named, and you should add the GP again to MLDists folder
         #end insert----------------------------------------
 
         if accepted == True:
@@ -119,10 +123,9 @@ class MLDist(object):
 
         return self.chosen_image
 
-    def GetRelDistances(features): #got code from Lasse
-        self.distancematrix = s
+    def GetRelDistances(self): #got code from Lasse
         #Feature significance calculation
-        chosen_images = np.array([self.image_features[i] for i in self.feedback_indices])
+        chosen_images = np.array([self.image_features[i] for i in self.index_chosen_image])
         weights = np.expand_dims(self.feedback, axis=1)
         weighted_mean = np.mean(np.multiply(weights, chosen_images), axis=0)
         weighted_variance = np.sum(np.square(np.subtract(chosen_images, weighted_mean)), axis=0)
@@ -130,5 +133,4 @@ class MLDist(object):
 
         # Distance calculation
         signif_chosen_images = np.multiply(significance, chosen_images)
-        distances = dist.cdist(signif_chosen_images, signif_chosen_images)
-        return distances
+        self.distance_matrix = dist.cdist(signif_chosen_images, signif_chosen_images) #passing chosen_images * chosen_images distance matrix now. ask if needed to pass chosein_images * all_images
