@@ -11,8 +11,24 @@ import pycuda.cumath as cumath
 import scikits.cuda.linalg as linalg
 import numpy as np
 import scipy.spatial.distance as dist
-import pycuda.gpuarray as gpuarray
 
+import pycuda.gpuarray as gpuarray
+import xmlrpclib
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+
+
+DATA_PATH = "/ldata/IMSE/data/Data/"
+
+def gp_caller(feedback, feedback_indices):
+    print "In test....."
+    data = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
+    print("Allocation done 28")
+    mean, var = gaussian_process(data, feedback, feedback_indices)
+    print("Allocation done 2999999999")
+    #print("Mean : " + str(mean))
+    #return "This is test for " + str(feedback)
+    print(mean.dtype)
+    return mean.tolist(), var.tolist()
 
 
 def distance(vector1, vector2, metric="manhattan"):
@@ -80,7 +96,8 @@ def round_up_to_blocksize(num, block_size, int_type):
     return int_type(num)
 
 def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, int_type=np.int32,
-                     kernel_file='kernels.c', debug=False):
+                     kernel_file='/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/kernels.c', debug=False):
+    print("Inside GP")
     if debug:
         print("Initialized starts")
         print("Loading test data")
@@ -93,7 +110,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         np.set_printoptions(linewidth=500)
     import pycuda.autoinit
     print(feedback)
-    feedback_indices = feedback_indices.tolist()
+    print(type(feedback_indices))
+    #feedback_indices = feedback_indices.tolist()
     print(feedback_indices)
     print(data.shape)
     print(feedback_indices[0])
@@ -112,7 +130,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     except Exception as e:
         print(e)
     print("Check zero")
-    
+
     # Inialize variables
     # Pad everything to match block size
     # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
@@ -142,17 +160,22 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     mean = np.zeros((1, n_predict_padded), dtype=float_type)
     ucb = np.zeros((1, n_predict_padded), dtype=float_type)
     print("Check one")
-    
+
     # Allocate GPU memory and copy data, check datatype before each allocation
     # TODO: add dimension checking
     check_type(data, float_type)
     print(data.shape)
     data_gpu = drv.mem_alloc(data.nbytes)
     drv.memcpy_htod(data_gpu, data)
+    print("Allocation done")
     check_type(feedback_indices, int_type)
+    print("Allocation done 2")
     feedback_indices_gpu = drv.mem_alloc(feedback_indices.nbytes)
+    print("Allocation done 3")
     drv.memcpy_htod(feedback_indices_gpu, feedback_indices)
+    print("Allocation done 4")
     check_type(K, float_type)
+    print("Allocation done 5")
     K_gpu = drv.mem_alloc(K.nbytes)
     drv.memcpy_htod(K_gpu, K)
     check_type(K_inv, float_type)
@@ -181,8 +204,10 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     drv.memcpy_htod(feedback_gpu, feedback)
     check_type(mean, float_type)
     mean_gpu = drv.mem_alloc(mean.nbytes)
+    print("Allocation done 20")
 
     calc_K(cuda_module, block_size, n_features, n_feedback_padded, data_gpu, feedback_indices_gpu, K_noise_gpu, K_gpu)
+    print("Allocation done 21")
     if debug:
         K_test_features = np.asfarray([data[i] for i in feedback_indices], dtype=float_type)
         K_test = dist.cdist(K_test_features, K_test_features, 'cityblock') / n_features + np.diag(K_noise)
@@ -190,6 +215,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         check_result('K', K[:n_feedback, :n_feedback], K_test[:n_feedback, :n_feedback])
 
     K_inv = invert_K(n_feedback, n_feedback_padded, float_type, K_gpu, K_inv_gpu)
+    print("Allocation done 22")
 
     calc_K_x(cuda_module, block_size, n_feedback_padded, n_predict_padded, n_features, feedback_indices_gpu,
              predict_indices_gpu, data_gpu, K_x_gpu)
@@ -207,6 +233,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     K_x_gpuarr = gpuarray.to_gpu(K_x.astype(float_type))
     K_xK_gpu = linalg.dot(K_x_gpuarr, K_inv_gpuarr)
     K_xK = K_xK_gpu.get()
+    print("Allocation done 23")
 
     #calc_K_xK()
     if debug:
@@ -216,12 +243,14 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print(K_xK.shape)
 
     calc_K_xKK_x_T(cuda_module, block_size, n_feedback_padded, n_predict_padded, K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu)
+    print("Allocation done 24")
     if debug:
         drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
         K_xKK_x_T_test = np.diag(np.matrix(K_xK) * np.matrix(K_x).T)
         check_result("K_xKK_x_T", diag_K_xKK_x_T, K_xKK_x_T_test)
 
     calc_variance(cuda_module, block_size, n_predict_padded, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, variance_gpu)
+    print("Allocation done 25")
     if debug:
         drv.memcpy_dtoh(variance, variance_gpu)
         variance_test = np.sqrt(
@@ -229,6 +258,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         check_result('Variance', variance[:, :n_predict], variance_test[:, :n_predict])
 
     mean = np.dot(K_xK, feedback)
+    print("Allocation done 26")
     if debug:
         #drv.memcpy_dtoh(mean, mean_gpu)
         mean_test = np.dot(K_xK, feedback)
@@ -263,6 +293,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print('Mean differences (first 10):', np.subtract(mean.flatten()[:10], test_mean[:10]))
         print(mean.flatten()[:10])
         print(test_mean[:10])
+    print("Allocation done 27")
     return mean, variance
 
 
@@ -332,10 +363,17 @@ def calc_UCB(cuda_module, block_size, n_predict_padded, mean_gpu, variance_gpu, 
 if __name__ == "__main__":
     # Load image features
     #feat = np.asfarray(np.load("../../../../data/Data/cl25000.npy"), dtype="float32")
-    feat = None
-    feedback = np.array(np.random.random(33))
-    mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"), debug=True)
+    #feat = None
+    #feedback = np.array(np.random.random(33))
+    #mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"), debug=True)
 
-    print(np.shape(mean))
-    print(np.shape(ucb))
+    #print(np.shape(mean))
+    #print(np.shape(ucb))
+
+    server = SimpleXMLRPCServer(("localhost", 8888))
+    server.register_function(gp_caller, "gp")
+    #server.register_function(gaussian_process, "gp")
+    print "Listening at 8888"
+    server.serve_forever()
+
 
