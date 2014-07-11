@@ -107,6 +107,7 @@ class GPSOM(object):
             print "1 image"
             chosen_image_indices = np.array([ucb.argmax()])
             print "Chosen Image Incex :: " + str(type(chosen_image_indices))
+            print chosen_image_indices[0]
         else:
             chosen_image_indices = sorted(ucb)[-num_predictions:]
             print "Chosen Image Incex :: " + str(chosen_image_indices)

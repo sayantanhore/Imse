@@ -23,7 +23,7 @@ def gp_caller(feedback, feedback_indices):
     print "In test....."
     data = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
     print("Allocation done 28")
-    mean, var = gaussian_process(data, feedback, feedback_indices)
+    mean, var = gaussian_process(data, feedback, feedback_indices, debug=False)
     print("Allocation done 2999999999")
     #print("Mean : " + str(mean))
     #return "This is test for " + str(feedback)
@@ -101,12 +101,12 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     if debug:
         print("Initialized starts")
         print("Loading test data")
-        with open('feedback.txt') as infile:
-            feedback = np.loadtxt(infile)
-        with open('feat.txt') as infile:
-            data = np.loadtxt(infile)
-        with open('feedback_idx.txt') as infile:
-            feedback_indices = np.loadtxt(infile)
+#        with open('feedback.txt') as infile:
+#            feedback = np.loadtxt(infile)
+#        with open('feat.txt') as infile:
+#            data = np.loadtxt(infile)
+#        with open('feedback_idx.txt') as infile:
+#            feedback_indices = np.loadtxt(infile)
         np.set_printoptions(linewidth=500)
     import pycuda.autoinit
     print(feedback)
@@ -219,8 +219,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
 
     calc_K_x(cuda_module, block_size, n_feedback_padded, n_predict_padded, n_features, feedback_indices_gpu,
              predict_indices_gpu, data_gpu, K_x_gpu)
+    drv.memcpy_dtoh(K_x, K_x_gpu)
     if debug:
-        drv.memcpy_dtoh(K_x, K_x_gpu)
         K_x_test = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
 #        for i, idx1 in enumerate(predict_indices):
 #            for j, idx2 in enumerate(feedback_indices):
@@ -294,6 +294,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print(mean.flatten()[:10])
         print(test_mean[:10])
     print("Allocation done 27")
+    print(mean)
     return mean, variance
 
 

@@ -182,9 +182,13 @@ function predict(){
     	}
     	//pageMask(true, $("#id_mask"));
     	$.get(url, input_data).done(function(data){
-    		console.log(data)
+            console.log("Incoming image")
+            console.log(typeof eval(data))
+            console.log(eval(data))
+    		console.log(parseInt(eval(data)[0]))
     		var new_image = $(document).find(".glyphicon-ok").parent().parent().find("img");
-			new_image.attr("src", loc + "/media/im" + (parseInt(data) + 1) + ".jpg");
+            console.log(parseInt(data[0]) + 1)
+			new_image.attr("src", loc + "/media/im" + (parseInt(eval(data)[0]) + 1) + ".jpg");
 			new_image.on("load", loadImage);
 		}).fail(function(){
 			pageMask(false, $("#id_mask"));
