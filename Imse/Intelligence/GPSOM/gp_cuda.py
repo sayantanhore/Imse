@@ -100,7 +100,7 @@ class GaussianProcessGPU:
             print("Initialized starts")
             with open('feat.txt') as infile:
                 img_features = np.loadtxt(infile)
-                img_features = img_features[:500]
+#                img_features = img_features[:500]
         import pycuda.autoinit
         np.set_printoptions(linewidth=500)
         self.float_type = float_type
@@ -255,7 +255,7 @@ class GaussianProcessGPU:
             #check_result('K', self.K[:self.n_shown, :self.n_shown], K_test[:self.n_shown, :self.n_shown])
 
         self.invert_K()
-        print(self.K)
+#        print(self.K)
         self.calc_K_x()
         if debug:
             drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
@@ -285,7 +285,7 @@ class GaussianProcessGPU:
             K_xKK_x_T_test = np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)
             check_result("K_xKK_x_T", self.diag_K_xKK_x_T, K_xKK_x_T_test)
         print("K_xKK_xT")
-        print(self.diag_K_xKK_x_T)
+#        print(self.diag_K_xKK_x_T)
 
         self.calc_variance()
         if debug:
@@ -294,8 +294,8 @@ class GaussianProcessGPU:
                 np.abs(np.subtract(self.diag_K_xx[:self.n_predict], self.diag_K_xKK_x_T[:, :self.n_predict])))
             check_result('Variance', self.variance[:, :self.n_predict], variance_test[:, :self.n_predict])
 
-        print(self.K_xK.shape)
-        print(self.feedback)
+#        print(self.K_xK.shape)
+#        print(self.feedback)
         self.mean = np.dot(self.K_xK, self.feedback)
         self.calc_mean()
         if debug:
@@ -332,9 +332,9 @@ class GaussianProcessGPU:
 
             print('Variance isclose True count:', sum(np.isclose(self.variance.flatten()[:self.n_predict], test_variance)))
             print('Mean isclose True count:', sum(np.isclose(self.mean.flatten()[:self.n_predict], test_mean)))
-            print('Mean differences (first 10):', np.subtract(self.mean.flatten()[:10], test_mean[:10]))
-            print(self.mean.flatten()[:10])
-            print(test_mean[:10])
+#            print('Mean differences (first 10):', np.subtract(self.mean.flatten()[:10], test_mean[:10]))
+#            print(self.mean.flatten()[:10])
+#            print(test_mean[:10])
 
         return self.variance, self.mean
 
@@ -404,7 +404,7 @@ if __name__ == "__main__":
 
     mean, variance =gaussianProcess.gaussian_process(feedback, feedback_indices, debug=True)
 
-    for value in mean:
+    for value in mean.flatten():
         sys.stdout.write(str(value) + '\t')
     sys.stdout.write('\n')
     for value in variance.flatten():
