@@ -6,22 +6,6 @@ import os, time, xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from subprocess import Popen
 from signal import SIGTERM
-'''
-def test2():
-    return "This is test"
-def gaussian_RPC():
-    server = SimpleXMLRPCServer(("localhost", 8888))
-    print "Configured"
-    server.register_function(gp.test, "test")
-    print "Listening at 8888"
-    server.serve_forever()
-def gaussian_RPC2():
-    server = SimpleXMLRPCServer(("localhost", 8880))
-    print "Configured"
-    server.register_function(gp.gaussian_process, "gaussian_process")
-    print "Listening at 8888"
-    server.serve_forever()
-'''
 
 class GPSOM(object):
 
@@ -38,7 +22,7 @@ class GPSOM(object):
         self.feedback = []
         self.iteration = 0  # TODO: use this to change the exploration/exploitation ratio
         self.gp = None
-        self.selected_images = []
+        self.last_selected_image = None
         print("Haha")
         #p = Popen(["python", "/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/gp_cuda.py"])
         #time.sleep(0.8)
@@ -54,13 +38,16 @@ class GPSOM(object):
 
     def Predict(self, feedback, accepted, num_predictions = 1):
         print "Inside predict"
+        print num_predictions
 
         #newpid = os.fork()
         #if newpid == 0:
             #gaussian_RPC()
         #else:
             #time.sleep(1)
-        self.feedback = self.feedback + feedback
+        self.feedback = feedback
+        if accepted == True:
+            self.shown_images = np.append(self.shown_images, np.array([self.last_selected_image]))
         print "Before cuda initialization"
         '''
         if not self.gp:
@@ -103,25 +90,34 @@ class GPSOM(object):
         print "After calling gaussian process"
         ucb = mean + var
         print("Hello hello")
+        print "Num Predictions" + str(type(num_predictions))
         if num_predictions == 1:
             print "1 image"
             chosen_image_indices = np.array([ucb.argmax()])
             print "Chosen Image Incex :: " + str(type(chosen_image_indices))
-            print chosen_image_indices[0]
+            self.last_selected_image = chosen_image_indices[0]
         else:
-            chosen_image_indices = sorted(ucb)[-num_predictions:]
-            print "Chosen Image Incex :: " + str(chosen_image_indices)
+            print "Greater than 1"
+            print(ucb)
+            #ucb.sort()
+            print("UCB Sorted")
+            print ucb.shape
+            print "Just before slicing"
+            print num_predictions
+            #chosen_image_indices = ucb[0,:][-num_predictions:]
+            chosen_image_indices = ucb[0,:].argsort()[-num_predictions:][::-1]
+            print chosen_image_indices
+            print "Chosen Image Incex :: " + str(type(chosen_image_indices))
+            self.shown_images = np.append(self.shown_images, chosen_image_indices)
+            # Update the feedback
+            self.feedback = self.feedback + feedback
         print "Image picked up"
         print(type(self.shown_images))
         #self.shown_images = self.shown_images + chosen_image_indices
-        self.shown_images = np.append(self.shown_images, chosen_image_indices)
+        #self.shown_images = np.append(self.shown_images, chosen_image_indices)
         print "Added to shown list"
         self.iteration += 1
-        #os.kill(newpid, SIGTERM)
-        print "Now kill process"
-        #global p
-        #p.send_signal(SIGTERM)
-        print "Process killed"
+        print("Checking before returning :: " + str(type(chosen_image_indices)))
         return chosen_image_indices
 
 

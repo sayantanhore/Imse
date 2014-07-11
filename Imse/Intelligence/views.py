@@ -290,6 +290,7 @@ def do_search(request, state = 'nostart'):
     feedback = request.GET['feedback'].encode("utf-8").replace("[", "").replace("]", "").replace("\"", "").split(",")
     feedback = [float(f) for f in feedback]
     accepted = request.GET['accepted'].encode("utf-8")
+    num_predictions = int(request.GET['num_prediction'].encode("utf-8"))
 
         #marks.append(int(request.GET.get('mark'+(Image.objects.get(index=im).filename),0)))
     #print e.algorithm
@@ -326,10 +327,10 @@ def do_search(request, state = 'nostart'):
     else:
 
         if accepted == "true":
-            ims = predictor.Predict(feedback, True)
+            ims = predictor.Predict(feedback, True, num_predictions)
         elif accepted == "false":
-            ims = predictor.Predict(feedback, False)
-
+            ims = predictor.Predict(feedback, False, num_predictions)
+        print("Checking ims type :: " + str(ims.shape))
 
     if request.GET.get('action')=='Finish!':
         e.finished = True
@@ -355,7 +356,7 @@ def do_search(request, state = 'nostart'):
 
         print "Hello ..." + str(ims)
     global p
-    p.send_signal(SIGTERM)
+    #p.send_signal(SIGTERM)
     return HttpResponse(str(ims))
 
 

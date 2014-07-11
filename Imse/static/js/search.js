@@ -24,19 +24,24 @@ function rgb2hex(rgb) {
 }
 
 
+// Global - Method: Collect feedbacks
 
+function collectFeedback(){
+	var feedback = [];
+	var slider_input = $("#id_image_container .panel-body .row .col-md-3 input[type = text]")
+	slider_input.each(function(){
+    		feedback.push($(this).data("slider").getValue() / 10);
+    });
+    console.feedback("Length of Feedback :: " + feedback.length);
+    console.log("Feedback :: " + feedback);
+    return feedback;
+}
 
 // Global - Method: Get slider value
 
 function getFeedback(val){
 	console.log("Get Feedback Called :: ");
-	feedback = [];
-	var slider_input = $("#id_image_container .panel-body .row .col-md-3 input[type = text]")
-	slider_input.each(function(){
-    		feedback.push($(this).data("slider").getValue() / 10);
-    });
-    
-    console.log("Feedback :: " + feedback);
+	feedback = collectFeedback();
     var no_of_images_accepted = images_accepted.length;
 
     if(no_of_images_accepted === 0){
@@ -48,7 +53,7 @@ function getFeedback(val){
     	}
     }
     console.log("Feedback :: " + feedback);
-    predict();
+    predict(1);
 }
 
 
@@ -159,37 +164,88 @@ function loadImage(){
 
 // Global Method: Ajax Call for Image Prediction
 
-function predict(){
+function predict(num_prediction){
+		console.log("Predicting");
     	var input_data = {
     		"username": username,
     		"algorithm": "GP-SOM",
     		"imagesnumiteration": no_of_shown_images,
     		"category": "None",
     		"feedback": JSON.stringify(feedback),
-    		"accepted": current_image_accepted
+    		"accepted": current_image_accepted,
+    		"num_prediction": num_prediction
     	};
+    	console.log("Predict 2")
+
 
     	if(current_image_accepted === true){
     		current_image_accepted = false;
     	};
 
+    	console.log("Predict 3")
+
     	if(firstIteration == true){
     		url = loc + "/search/start/"
     		firstIteration = false;
     	}
+
     	else{
     		url = loc + "/search/"
     	}
+    	console.log("Predict 4")
     	//pageMask(true, $("#id_mask"));
     	$.get(url, input_data).done(function(data){
+    		console.log("Data received");
+    		console.log(typeof data);
+    		console.log(data)
+    		//data = eval(data);
+
+    		console.log("Success :: " + data);
+			data = data.replace("[", "");
+			data = data.replace("]", "")
+			data = data.split(" ")
+
+			console.log("After formatting")
+			console.log(data)
+
             console.log("Incoming image")
+            console.log(data.length);
             console.log(typeof eval(data))
-            console.log(eval(data))
-    		console.log(parseInt(eval(data)[0]))
-    		var new_image = $(document).find(".glyphicon-ok").parent().parent().find("img");
-            console.log(parseInt(data[0]) + 1)
-			new_image.attr("src", loc + "/media/im" + (parseInt(eval(data)[0]) + 1) + ".jpg");
-			new_image.on("load", loadImage);
+            console.log(data);
+    		console.log(parseInt(data[0]))
+    		if(data.length == 1){
+    			var new_image = $(document).find(".glyphicon-ok").parent().parent().find("img");
+				new_image.attr("src", loc + "/media/im" + (parseInt(data[0]) + 1) + ".jpg");
+				new_image.on("load", loadImage);
+    		}
+    		else{
+    			$("#id_image_container .panel-body").empty();
+    			console.log("1")
+		    	feedback = [];
+		    	console.log("2")
+				sliders = [];
+				console.log("3")
+				images_accepted = [];
+				console.log("4")
+				current_image_accepted = false;
+				console.log("5")
+				addInitialEmptyImageContainers();
+				console.log("6")
+    			$("#id_image_container img").each(function(index){
+    				console.log("7")
+					image_pos = parseInt(data[index]) + 1;
+					console.log("8")
+					// Loading images
+					$(this).attr("src", loc + "/media/im" + image_pos + ".jpg");
+					console.log("9")
+					$(this).on("load", loadImage);
+					console.log("10")
+
+				});
+				// Generate Sliders
+				sliders = $("#id_image_container img").parent().siblings().find("input[type = text]").slider("setValue", 0);
+	    		}
+    		
 		}).fail(function(){
 			pageMask(false, $("#id_mask"));
 			console.log(arguments);
@@ -477,7 +533,7 @@ $(document).ready(function(){
 			data = data.replace("[", "");
 			data = data.replace("]", "")
 			data = data.split(", ")
-			var images = $("#id_image_container img")
+			var images = $("#id_image_container img");
 			
 			$("#id_image_container img").each(function(index){
 				image_pos = parseInt(data[index]) + 1;
@@ -501,6 +557,13 @@ $(document).ready(function(){
 	
     // Loading predicted images
 
+    $(".navbar-right > li:first-child a").click(function(event){
+    	feedback = collectFeedback();
+		predict(no_of_shown_images);
+    });
+
+
+    /*
     $(".navbar-right > li:first-child a").click(function(event){
     	alert("Do you want to accept? ");
     	var new_image_sources = [];
@@ -532,7 +595,7 @@ $(document).ready(function(){
     	$(this).css("display", "none");
 
     });
-
+    */
 
     //$(".navbar-right a").click(function(event){
  
