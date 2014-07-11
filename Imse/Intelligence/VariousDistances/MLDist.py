@@ -105,7 +105,7 @@ class MLDist(object):
         #END DO ONCE
 
         self.image_features = np.load(featurefile)
-        #recalculate distancematrix (was called 'data' in Sayantan's code)
+        #recalculate distance_matrix (was called 'data' in Sayantan's code)
         self.distance_matrix = self.GetRelDistances( features )
         self.GP.data = self.distance_matrix #poorly named, and you should add the GP again to MLDists folder
         #end insert----------------------------------------
