@@ -9,7 +9,7 @@ class GPSOM(object):
     #IMAGES_NUMBER = 1000
     
     def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, category):
-        print "Inside GPSOM"
+        print("Inside GPSOM")
         #self.image_features = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
         self.first_sample_size = images_number_iteration
         self.images_number = images_number_total
@@ -31,16 +31,16 @@ class GPSOM(object):
         return self.feedback_indices
     
     def Predict(self, feedback, num_predictions):
-        print "Inside predict"
+        print("Inside predict")
         self.feedback = self.feedback + feedback
         #self.feedback_indices.append(1)
-        print "Before cuda initialization"
+        print("Before cuda initialization")
         print("After cuda initialization")
         # What this method returns
         images = []
         # Copy all the values that will be used as they have to be modified only within iteration
         # Current training set with images and feedback and clusters assignments
-        print "Before calling gaussian process"
+        print("Before calling gaussian process")
 
         feedback_str = '\t'.join(map(str, self.feedback)) + '\n'
         feedback_indices = np.arange(len(self.feedback), dtype=np.int)
@@ -54,6 +54,7 @@ class GPSOM(object):
             print(e)
         print(gp_process)
         stdoutdata, stderrdata = gp_process.communicate(input=feedback_indices_str + feedback_indices_str)
+        print(stdoutdata)
         mean_variance = stdoutdata.strip().split('\n')
         print(len(mean_variance))
         mean = None
@@ -67,7 +68,7 @@ class GPSOM(object):
 
         #mean, variance = gp_cuda.gaussian_process(self.image_features, self.feedback, self.feedback_indices)
         ucb = np.add(mean, variance)
-        print "After calling gaussian process"
+        print("After calling gaussian process")
         chosen_image_indices = [ucb.argmax()]
         self.shown_images = self.shown_images + chosen_image_indices
         self.iteration += 1

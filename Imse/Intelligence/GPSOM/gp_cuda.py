@@ -96,11 +96,12 @@ class GaussianProcessGPU:
 
     def __init__(self, img_features, block_size=(16, 16, 4), float_type=np.float32,
                  int_type=np.int32, kernel_file='kernels.c', debug=False):
+        with open('feat.txt') as infile:
+            img_features = np.loadtxt(infile)
+
         if debug:
             print("Initialized starts")
-            with open('feat.txt') as infile:
-                img_features = np.loadtxt(infile)
-#                img_features = img_features[:500]
+            img_features = img_features[:500]
         import pycuda.autoinit
         np.set_printoptions(linewidth=500)
         self.float_type = float_type
@@ -108,7 +109,8 @@ class GaussianProcessGPU:
         self.block_size = block_size
         self.n_features = np.size(img_features, 1)  # TODO: Assuming the n_features is divisible by block_size[2], fix
         cuda_source = open(kernel_file, 'r').read()
-        print("len cuda_source" + str(len(cuda_source)))
+        if debug:
+            print("len cuda_source" + str(len(cuda_source)))
         try:
             self.cuda_module = SourceModule(cuda_source)
         except Exception as e:
@@ -124,7 +126,8 @@ class GaussianProcessGPU:
         # Allocate GPU memory and copy data, check datatype before each allocation
         # TODO: add dimension checking
         check_type(self.img_features, self.float_type)
-        print(self.img_features.shape)
+        if debug:
+            print(self.img_features.shape)
         self.feat_gpu = drv.mem_alloc(self.img_features.nbytes)
         drv.memcpy_htod(self.feat_gpu, self.img_features)
 
@@ -257,8 +260,8 @@ class GaussianProcessGPU:
         self.invert_K()
 #        print(self.K)
         self.calc_K_x()
+        drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
         if debug:
-            drv.memcpy_dtoh(self.K_x, self.K_x_gpu)
             K_x_test = np.zeros((self.n_predict_padded, self.n_shown_padded), dtype=self.float_type)
 #            for i, idx1 in enumerate(self.predict_idx):
 #                for j, idx2 in enumerate(self.shown_idx):
@@ -284,12 +287,12 @@ class GaussianProcessGPU:
             drv.memcpy_dtoh(self.diag_K_xKK_x_T, self.diag_K_xKK_x_T_gpu)
             K_xKK_x_T_test = np.diag(np.matrix(self.K_xK) * np.matrix(self.K_x).T)
             check_result("K_xKK_x_T", self.diag_K_xKK_x_T, K_xKK_x_T_test)
-        print("K_xKK_xT")
+            print("K_xKK_xT calculated")
 #        print(self.diag_K_xKK_x_T)
 
         self.calc_variance()
+        drv.memcpy_dtoh(self.variance, self.variance_gpu)
         if debug:
-            drv.memcpy_dtoh(self.variance, self.variance_gpu)
             variance_test = np.sqrt(
                 np.abs(np.subtract(self.diag_K_xx[:self.n_predict], self.diag_K_xKK_x_T[:, :self.n_predict])))
             check_result('Variance', self.variance[:, :self.n_predict], variance_test[:, :self.n_predict])
@@ -400,9 +403,10 @@ if __name__ == "__main__":
 
     feedback = np.array(sys.stdin.readline().split('\t'), dtype=np.float32)
     feedback_indices = np.array(sys.stdin.readline().split('\t'), dtype=np.float32)
-    gaussianProcess = GaussianProcessGPU(None, debug=True)
+    debug = False
+    gaussianProcess = GaussianProcessGPU(None, debug=debug)
 
-    mean, variance =gaussianProcess.gaussian_process(feedback, feedback_indices, debug=True)
+    mean, variance =gaussianProcess.gaussian_process(feedback, feedback_indices, debug=debug)
 
     for value in mean.flatten():
         sys.stdout.write(str(value) + '\t')
