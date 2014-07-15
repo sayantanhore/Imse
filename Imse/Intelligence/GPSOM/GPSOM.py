@@ -23,7 +23,7 @@ class GPSOM(object):
         self.iteration = 0  # TODO: use this to change the exploration/exploitation ratio
         self.gp = None
         self.last_selected_image = None
-        print("Haha")
+        self.remaining_image_list = np.setdiff1d(np.array([i for i in range(images_number_total)]), self.shown_images)
         #p = Popen(["python", "/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/gp_cuda.py"])
         #time.sleep(0.8)
 
@@ -45,7 +45,7 @@ class GPSOM(object):
             #gaussian_RPC()
         #else:
             #time.sleep(1)
-        self.feedback = feedback
+        #self.feedback = feedback
         if accepted == True:
             self.shown_images = np.append(self.shown_images, np.array([self.last_selected_image]))
         print "Before cuda initialization"
@@ -74,7 +74,7 @@ class GPSOM(object):
             #mean, var = server_proxy.gp(self.image_features, self.feedback, self.shown_images)
             print("Feedback :::: " + str(self.feedback))
             print("Shown Images :::: " + str(self.shown_images))
-            mean, var = server_proxy.gp(self.feedback, self.shown_images.tolist())
+            mean, var = server_proxy.gp(self.feedback + feedback, self.shown_images.tolist())
             mean = np.array(mean, dtype = "float32")
             var = np.array(var, dtype = "float32")
             print "2"
@@ -118,6 +118,8 @@ class GPSOM(object):
         print "Added to shown list"
         self.iteration += 1
         print("Checking before returning :: " + str(type(chosen_image_indices)))
-        return chosen_image_indices
+        images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
+        self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
+        return images_to_show
 
 

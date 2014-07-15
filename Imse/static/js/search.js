@@ -195,24 +195,24 @@ function predict(num_prediction){
     	console.log("Predict 4")
     	//pageMask(true, $("#id_mask"));
     	$.get(url, input_data).done(function(data){
-    		console.log("Data received");
+    		
     		console.log(typeof data);
     		console.log(data)
-    		//data = eval(data);
-
+    		data = eval(data);
+    		/*
     		console.log("Success :: " + data);
 			data = data.replace("[", "");
 			data = data.replace("]", "")
 			data = data.split(" ")
-
-			console.log("After formatting")
+			*/
+			
 			console.log(data)
 
-            console.log("Incoming image")
+            
             console.log(data.length);
             console.log(typeof eval(data))
             console.log(data);
-    		console.log(parseInt(data[0]))
+    		
     		if(data.length == 1){
     			var new_image = $(document).find(".glyphicon-ok").parent().parent().find("img");
 				new_image.attr("src", loc + "/media/im" + (parseInt(data[0]) + 1) + ".jpg");
@@ -220,27 +220,16 @@ function predict(num_prediction){
     		}
     		else{
     			$("#id_image_container .panel-body").empty();
-    			console.log("1")
 		    	feedback = [];
-		    	console.log("2")
 				sliders = [];
-				console.log("3")
 				images_accepted = [];
-				console.log("4")
 				current_image_accepted = false;
-				console.log("5")
 				addInitialEmptyImageContainers();
-				console.log("6")
     			$("#id_image_container img").each(function(index){
-    				console.log("7")
 					image_pos = parseInt(data[index]) + 1;
-					console.log("8")
 					// Loading images
 					$(this).attr("src", loc + "/media/im" + image_pos + ".jpg");
-					console.log("9")
 					$(this).on("load", loadImage);
-					console.log("10")
-
 				});
 				// Generate Sliders
 				sliders = $("#id_image_container img").parent().siblings().find("input[type = text]").slider("setValue", 0);
