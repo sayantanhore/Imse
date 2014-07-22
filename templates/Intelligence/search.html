@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		
+		<title>Imse Search</title>
+		
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		
+		<!-- Fonts -->
+		<link href='http://fonts.googleapis.com/css?family=Dosis|Titillium+Web' rel='stylesheet' type='text/css'>
+		
+		<!-- Bootstrap -->
+		<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+		
+		<link href="/static/Intelligence/stylesheets/simple-slider.css" rel="stylesheet">
+        
+		<link href="/static/Intelligence/stylesheets/gallery.css" rel='stylesheet' type='text/css'>
+	   	
+		<style>
+			.table td{
+				border-top: none;
+			}
+		</style>
+		
+	   	<script src="/static/scripts/path.js"></script>
+		<script src="/static/scripts/jquery-1.10.1.min.js"></script>
+		<script src="/static/Intelligence/scripts/simple-slider.min.js"></script>
+		<script src="/static/bootstrap/js/bootstrap.min.js"></script>
+		
+		<script>
+			
+			// Convert RGB to HEX
+			
+			function rgb2hex(rgb) {
+				rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+				function hex(x) {
+				    return ("0" + parseInt(x).toString(16)).slice(-2);
+				}
+				return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+			}
+			
+		    var rowCount = 0;
+			$(document).ready(function(){
+			
+				var url = document.location.href;
+				console.log("URL: " + url);
+				
+				
+				
+				var colors = [];
+            
+				// Get the project path
+				
+				PATH = pathGenerator(url);
+				
+				$(".table td").css("height", 5 + "px");
+                
+                //console.log("Filename :: " + {{target}})
+    			// Setting page height
+				
+				//$(".container-fluid > div").css("height", ($(document).height() - (parseInt($(".navbar").css("height").replace("px", "")) + 40)) + "px");
+				
+				//$("body").css("overflow", "hidden");
+				
+				
+				// Setting top-margin for visible components to put it below Navbar
+					
+				$("#id_page_margin").css("margin-top", (parseInt($(".navbar").css("height").replace("px", "")) + 30) + "px");
+				
+				// Setting dimension of query image
+				
+                /*
+				var img_query = $("#id_img_query");
+    		
+				img_query.on("load", function(){
+				
+					var img_width = img_query.width();
+					var img_height = img_query.height();
+				
+				
+				
+				
+					if(img_width >= img_height){
+				
+						$(this).css("width", $(this).parent().css("width").replace("px", "") - 20);
+						
+					}
+					else{
+				
+						$(this).css("height", $(this).parent().css("width").replace("px", "") - 50 + "px").css("margin-top", "10px");
+					
+					}
+				
+				});
+                */
+				
+				// Setting dimension of image - container
+				
+				var widthOfImageContainer = $("#id_main_container .row-fluid div").css("width").replace("px", "");
+				
+				// Setting height
+				
+				$("#id_main_container .row-fluid div").css("height", widthOfImageContainer+"px");
+				
+				
+				
+				// Setting images in square box
+				
+				var heightOfRow = $("#id_page_margin     > div").css("height").replace("px", "");
+                console.log("heightOfRow 1 :: " + heightOfRow)
+				console.log("heightOfRow 2 :: " + $("div#id_main_container").css("height").replace("px", ""));
+				var heightOfImageContainer = widthOfImageContainer;
+				
+                $("div#id_main_container .row-fluid:not(:first-child)").css("padding-top", ((heightOfRow - rowCount * heightOfImageContainer) / rowCount) + "px");
+				
+				// Setting dimension for images
+				
+				var img = $(".well #id_img_container img");
+				
+				img.on("load", function(){
+				
+					img_width = $(this).width();
+					img_height = $(this).height();
+                    
+                    $(this).parent().css("text-align", "center");
+					
+                    if(img_width >= img_height){
+                    
+                        $(this).css("width", (widthOfImageContainer - 24) + "px");
+                        
+                        //if(img_width >= img_height){
+                        
+                        	$(this).css({"margin-top": ((heightOfImageContainer - $(this).height())/2) + "px"});
+                        	
+                        //}
+                        //else{
+                        
+                        	//$(this).css({"margin-top": (heightOfImageContainer - $(this).height())/4 + "px"});
+                        
+                        //}
+                        //$(this).css({"padding-left": "2px", "padding-right": "2px"});
+                    
+                    }
+                    else{
+                    
+                        $(this).css("height", heightOfImageContainer -24 + "px");
+                        
+                        //$(this).css({"margin-top": 6 + "px", "margin-bottom": 6 + "px"});
+                        $(this).css({"margin-top": ((heightOfImageContainer - $(this).height())/2 - 3) + "px"});
+                        
+                        $(this).css({"margin-left": ((widthOfImageContainer - $(this).width())/2 - 3) + "px", "margin-right": (widthOfImageContainer - $(this).width())/2 + "px"});
+                        //$(this).css({"padding-top": 2, "padding-bottom": 2});
+                    
+                    }
+					//console.log("Width :: "+$(this).width());
+					
+					// Adding polaroid effect to image container
+					
+					$(this).parent().addClass("img-polaroid");
+					
+					
+				
+				});
+				
+				//$(".well #id_img_container:odd").css("margin-left", widthOfImageContainer + "px");
+                
+				$(".well #id_img_container:even").css("float", "right");
+                $(".well #id_img_container:even").css("margin-right", 25 + "px");
+                $(".well .row-fluid:eq(0)").css("margin-bottom", heightOfImageContainer/4 + "px");
+				
+				//$(".span3 div").css("height", "20px");
+				
+				// Resizing slider
+				
+				dragger_width = $("div.dragger").css("width");
+				$("div.track").css("height", "5px");
+				$("div.highlight-track").css("height", "5px");
+				$("div.dragger").css("height", dragger_width);
+				
+				// Resizing Radio button container
+				
+				$('div[title = "containsRadioButtons"]').css("height", $(".btn").css("height"));
+				
+				// Positioning slider
+				
+				var slider_width = (widthOfImageContainer * 0.9) + "px";
+				
+				
+				var slider_top = (heightOfImageContainer - 30) + "px";
+				
+				
+				$("div.slider").each(function(index){
+				
+				
+					$(this).css("width", slider_width).css("top", slider_top);
+					
+					// Attach tooltip
+				
+					$(this).tooltip({title: "0.0"});
+					
+					// Making sliders visible over images
+						
+					$(this).parent().css("z-index", 2);
+				
+				});
+				
+                $("#id_main_container #id_img_container").css("padding", "0px");
+                
+				$("#id_main_container #id_img_container > div").each(function(index){
+				
+				    $(this).width(widthOfImageContainer + "px");
+					//$(this).css("margin-left", ((widthOfImageContainer - $(this).width())/2) + "px");
+                    //$(this).css("margin-left", -2 + "px");
+					
+					// Hiding slider initially
+					
+					$(this).hide();
+					
+					// Showing slider on mouse over
+					
+					
+					/*
+					$(this).parent().on({
+					
+						mouseenter: function(){
+						
+							$(this).find("div").show();
+						
+						},
+						
+						mouseleave: function(){
+						
+							$(this).find("div").hide();
+						
+						}
+					
+					});
+					*/
+				});
+				
+				
+				// Setting slider
+				
+				$("[data-slider]").each(function (data) {
+					
+						// Setting Initial value
+						
+						$(this).simpleSlider("setValue", 0.0);
+						
+						// Setting initial image opacity to 50%
+						
+						$(this).parent().parent().find("img").css("opacity", 0.5);
+						
+					
+					console.log($(this).val());
+					
+				}).bind("slider:ready slider:changed", function (event, data) {
+				
+						$(this).parent().find("div.slider").tooltip("hide").attr('data-original-title', data.value.toFixed(1)).tooltip('fixTitle').tooltip('show');
+						
+						$(this).parent().parent().find("img").css("opacity", (1 + data.value)/2);
+				
+				  		//$(this).nextAll(".output:first") .html(data.value.toFixed(3));
+                        
+                        //console.log("Slider Value :: " + data.value.toFixed(3));
+                        
+                        //console.log("Slider Value2 :: " + $(this).nextAll(".output:first") .html());
+				  		
+				});
+				
+				//console.log($("#id_main_container  div:nth-child(1) div.span3:nth-child(2)").css("right"));
+                $("div.well-small").css("width", "60px").css("padding", "0.5px");
+                
+                // Setting all slider-input to null
+                $("input[type='text']").val("0");
+                $('button[data-dismiss="modal"]').on("click", function(){
+                    $("input[value='Next!']").prop("disabled", "true");
+                    $("a[data-toggle='modal']").prop("disabled", "true");
+                });
+		
+		$(".table tr td").click(function(){
+			
+			cell_color = rgb2hex($(this).css("background-color"));
+			console.log(rgb2hex($(this).css("background-color")));
+			//$(".table").parent().append('<input type="text" style="background-color: ' + cell_color + ';"><br/>');
+			if($("#id_div_color_holder input:text").length <= 3){
+				$("#id_div_color_holder").append('<input type="text" class = "input-mini"  style="background-color: ' + cell_color + ';"><br/>');
+				//$("#id_div_color_holder").append($('<input/>',{type:'hidden', value: cell_color}));
+				
+				
+				
+				colors.push(cell_color);
+				
+				
+			}
+			else{
+				alert("Maximum 4 colours are alowed");
+			}
+			if($("#id_div_button_holder input").length == 0){
+				$("#id_div_button_holder").append('<input id="id_btn_search_color" type="button" name = "" value = "Search" class="btn btn-primary">');
+				
+				$("#id_div_button_holder input").click(function(event){
+					
+					//$("form").attr("action", action);
+					//window.location.href = action;
+					//$("form").submit();
+					
+					$.get("/firstround/", {colors: JSON.stringify(colors)}).done(function(data){
+						console.log("Success :: " + data);
+						data = data.replace("[", "");
+						data = data.replace("]", "")
+						data = data.split(", ")
+						var images = $("#id_img_container img")
+						console.log(images.length)
+						$("#id_img_container img").each(function(index){
+							image_pos = parseInt(data[index]) + 1;
+							$(this).attr("src", "/media/im" + image_pos + ".jpg")
+						});
+						
+					}).fail(function(){
+						console.log("Failure");
+					});
+					
+					/*
+					$.ajax({
+						url: "/firstround/",
+						type: "POST",
+						async: true,
+						success: function(data){
+							console.log("Success Ajax");
+						},
+						error: function(data){
+							console.log("Error");
+						}
+					});
+					*/
+				});
+			}
+			
+		});
+		
+                // Setting form-action
+		
+				//$("form").attr("action", PATH + "search/")
+				$("form").attr("action", "/search/")
+			
+			});
+		
+		// Picking up colours
+		
+		
+		</script>
+		
+	</head>
+	
+	<body>
+		 
+    	<!-- Start Navbar -->
+        <form action="" method="get">
+		<div class="navbar navbar-inverse navbar-fixed-top">
+            
+            <div class="navbar-inner">
+            
+                <div class="container">
+                
+                    <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="brand" href="/imse/start">ImSe</a>
+                    
+                    <div class="nav-collapse collapse">
+                        <p class="navbar-text pull-right">
+                            <input type="submit" name="action" value="Next!" class="btn btn-link btn-primary">
+				            <input type="submit" name="action" value="Finish!" class="btn btn-link btn-primary">
+                            <!--<a href="#myModal" role="button" class="btn btn-link btn-primary" data-toggle="modal">Finish!</a>-->
+                            
+                        </p>
+                        <ul class="nav">
+                          <li><a href="#about">About</a></li>
+                          <li><a href="#contact">Contact</a></li>
+                        </ul>
+                    </div>
+                    
+                </div>
+            
+            </div>
+            
+        </div>
+        
+        <!-- End Navbar -->
+		
+		
+		
+        <div id = "id_page_margin" class="container-fluid">
+        	
+        
+            <div class="row-fluid">
+                
+                <div class="span4 well">
+			
+			<table id="id_table_color_palette" class="table">
+				<tr>	
+					<td style = "background-color:#fddce5;"><a href="#">&nbsp;</a></td>
+					<td style = "background-color:#fadcec;">&nbsp;</td>
+					<td style = "background-color:#f6daed;">&nbsp;</td>
+					<td style = "background-color:#eedced;">&nbsp;</td>
+					
+					<td style = "background-color:#e4daee;">&nbsp;</td>
+					<td style = "background-color:#dfe1f1;">&nbsp;</td>
+					<td style = "background-color:#dfeefa;">&nbsp;</td>
+					<td style = "background-color:#e1f5fa;">&nbsp;</td>
+					
+					<td style = "background-color:#e1f3f0;">&nbsp;</td>
+					<td style = "background-color:#e2f1de;">&nbsp;</td>
+					<td style = "background-color:#eaf3d9;">&nbsp;</td>
+					<td style = "background-color:#f8f9dc;">&nbsp;</td>
+					
+					<td style = "background-color:#fefcdf;">&nbsp;</td>
+					<td style = "background-color:#fff1dc;">&nbsp;</td>
+					<td style = "background-color:#fee1dc;">&nbsp;</td>
+					<td style = "background-color:#fcd4d7;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#fac7d2;">&nbsp;</td>
+					<td style = "background-color:#f5c7da;">&nbsp;</td>
+					<td style = "background-color:#edc7dc;">&nbsp;</td>
+					<td style = "background-color:#dfc7df;">&nbsp;</td>
+					
+					<td style = "background-color:#d0c4e3;">&nbsp;</td>
+					<td style = "background-color:#cbcbe7;">&nbsp;</td>
+					<td style = "background-color:#c9e1f6;">&nbsp;</td>
+					<td style = "background-color:#cdecf5;">&nbsp;</td>
+					
+					<td style = "background-color:#ceeae5;">&nbsp;</td>
+					<td style = "background-color:#cee6c9;">&nbsp;</td>
+					<td style = "background-color:#d7eac3;">&nbsp;</td>
+					<td style = "background-color:#f0f3c7;">&nbsp;</td>
+					
+					<td style = "background-color:#fcf6c9;">&nbsp;</td>
+					<td style = "background-color:#ffe7c9;">&nbsp;</td>
+					<td style = "background-color:#fdcec7;">&nbsp;</td>
+					<td style = "background-color:#f9b8be;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#f5a3b6;">&nbsp;</td>
+					<td style = "background-color:#e7a6c1;">&nbsp;</td>
+					<td style = "background-color:#d3a7c4;">&nbsp;</td>
+					<td style = "background-color:#bfa5c4;">&nbsp;</td>
+					
+					<td style = "background-color:#ada3c7;">&nbsp;</td>
+					<td style = "background-color:#a7aad0;">&nbsp;</td>
+					<td style = "background-color:#a9c9ed;">&nbsp;</td>
+					<td style = "background-color:#aed7ea;">&nbsp;</td>
+					
+					<td style = "background-color:#afd6d0;">&nbsp;</td>
+					<td style = "background-color:#add1aa;">&nbsp;</td>
+					<td style = "background-color:#bed69f;">&nbsp;</td>
+					<td style = "background-color:#dfe8a4;">&nbsp;</td>
+					
+					<td style = "background-color:#fcf1a6;">&nbsp;</td>
+					<td style = "background-color:#ffcfa5;">&nbsp;</td>
+					<td style = "background-color:#f9aca5;">&nbsp;</td>
+					<td style = "background-color:#f397a0;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#ee839b;">&nbsp;</td>
+					<td style = "background-color:#d689ae;">&nbsp;</td>
+					<td style = "background-color:#bf8bb2;">&nbsp;</td>
+					<td style = "background-color:#a387b2;">&nbsp;</td>
+					
+					<td style = "background-color:#8a82b2;">&nbsp;</td>
+					<td style = "background-color:#848bba;">&nbsp;</td>
+					<td style = "background-color:#8ab7e1;">&nbsp;</td>
+					<td style = "background-color:#92cde1;">&nbsp;</td>
+					
+					<td style = "background-color:#95c9be;">&nbsp;</td>
+					<td style = "background-color:#95c18d;">&nbsp;</td>
+					<td style = "background-color:#a9c97f;">&nbsp;</td>
+					<td style = "background-color:#d0da83;">&nbsp;</td>
+					
+					<td style = "background-color:#f9ea87;">&nbsp;</td>
+					<td style = "background-color:#febd84;">&nbsp;</td>
+					<td style = "background-color:#f38d84;">&nbsp;</td>
+					<td style = "background-color:#ee7b82;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#ea6a81;">&nbsp;</td>
+					<td style = "background-color:#ce709e;">&nbsp;</td>
+					<td style = "background-color:#b176a2;">&nbsp;</td>
+					<td style = "background-color:#8c6ea1;">&nbsp;</td>
+					
+					<td style = "background-color:#716da1;">&nbsp;</td>
+					<td style = "background-color:#6b73a7;">&nbsp;</td>
+					<td style = "background-color:#73a1d2;">&nbsp;</td>
+					<td style = "background-color:#7fc1d9;">&nbsp;</td>
+					
+					<td style = "background-color:#83bfb4;">&nbsp;</td>
+					<td style = "background-color:#83ba72;">&nbsp;</td>
+					<td style = "background-color:#9abe5e;">&nbsp;</td>
+					<td style = "background-color:#c3d268;">&nbsp;</td>
+					
+					<td style = "background-color:#f8e36c;">&nbsp;</td>
+					<td style = "background-color:#fcaa6b;">&nbsp;</td>
+					<td style = "background-color:#ee796b;">&nbsp;</td>
+					<td style = "background-color:#eb626d;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#e84b6e;">&nbsp;</td>
+					<td style = "background-color:#cb6092;">&nbsp;</td>
+					<td style = "background-color:#a5689b;">&nbsp;</td>
+					<td style = "background-color:#81659b;">&nbsp;</td>
+					
+					<td style = "background-color:#67669d;">&nbsp;</td>
+					<td style = "background-color:#596a9f;">&nbsp;</td>
+					<td style = "background-color:#638fc3;">&nbsp;</td>
+					<td style = "background-color:#73bdd5;">&nbsp;</td>
+					
+					<td style = "background-color:#7dbca9;">&nbsp;</td>
+					<td style = "background-color:#7cb45e;">&nbsp;</td>
+					<td style = "background-color:#8aba49;">&nbsp;</td>
+					<td style = "background-color:#bccd40;">&nbsp;</td>
+					
+					<td style = "background-color:#f6da46;">&nbsp;</td>
+					<td style = "background-color:#f99c47;">&nbsp;</td>
+					<td style = "background-color:#ec6449;">&nbsp;</td>
+					<td style = "background-color:#e94e56;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#e73863;">&nbsp;</td>
+					<td style = "background-color:#cb4e8d;">&nbsp;</td>
+					<td style = "background-color:#a26095;">&nbsp;</td>
+					<td style = "background-color:#7e6199;">&nbsp;</td>
+					
+					<td style = "background-color:#5d629b;">&nbsp;</td>
+					<td style = "background-color:#4b669e;">&nbsp;</td>
+					<td style = "background-color:#5486bd;">&nbsp;</td>
+					<td style = "background-color:#6cbdd4;">&nbsp;</td>
+					
+					<td style = "background-color:#75baa1;">&nbsp;</td>
+					<td style = "background-color:#73b15a;">&nbsp;</td>
+					<td style = "background-color:#80b74c;">&nbsp;</td>
+					<td style = "background-color:#b4c93d;">&nbsp;</td>
+					
+					<td style = "background-color:#f6d727;">&nbsp;</td>
+					<td style = "background-color:#f68e2b;">&nbsp;</td>
+					<td style = "background-color:#e84b33;">&nbsp;</td>
+					<td style = "background-color:#e73843;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#e72653;">&nbsp;</td>
+					<td style = "background-color:#cd498c;">&nbsp;</td>
+					<td style = "background-color:#a05e92;">&nbsp;</td>
+					<td style = "background-color:#7b5f98;">&nbsp;</td>
+					
+					<td style = "background-color:#53609a;">&nbsp;</td>
+					<td style = "background-color:#46639c;">&nbsp;</td>
+					<td style = "background-color:#4e80b8;">&nbsp;</td>
+					<td style = "background-color:#6abbd3;">&nbsp;</td>
+					
+					<td style = "background-color:#71b99e;">&nbsp;</td>
+					<td style = "background-color:#6fb058;">&nbsp;</td>
+					<td style = "background-color:#7eb44d;">&nbsp;</td>
+					<td style = "background-color:#adc43f;">&nbsp;</td>
+					
+					<td style = "background-color:#f1d41c;">&nbsp;</td>
+					<td style = "background-color:#f18828;">&nbsp;</td>
+					<td style = "background-color:#e7402d;">&nbsp;</td>
+					<td style = "background-color:#de323c;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#d6254b;">&nbsp;</td>
+					<td style = "background-color:#c24188;">&nbsp;</td>
+					<td style = "background-color:#9d5990;">&nbsp;</td>
+					<td style = "background-color:#765a95;">&nbsp;</td>
+					
+					<td style = "background-color:#4e5d98;">&nbsp;</td>
+					<td style = "background-color:#445e9a;">&nbsp;</td>
+					<td style = "background-color:#437eb1;">&nbsp;</td>
+					<td style = "background-color:#55b4c7;">&nbsp;</td>
+					
+					<td style = "background-color:#69b498;">&nbsp;</td>
+					<td style = "background-color:#68ac59;">&nbsp;</td>
+					<td style = "background-color:#70af50;">&nbsp;</td>
+					<td style = "background-color:#9fc043;">&nbsp;</td>
+					
+					<td style = "background-color:#d5c427;">&nbsp;</td>
+					<td style = "background-color:#d9802d;">&nbsp;</td>
+					<td style = "background-color:#d73b2e;">&nbsp;</td>
+					<td style = "background-color:#c83239;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#ba2944;">&nbsp;</td>
+					<td style = "background-color:#b13381;">&nbsp;</td>
+					<td style = "background-color:#914c8e;">&nbsp;</td>
+					<td style = "background-color:#6f4d8f;">&nbsp;</td>
+					
+					<td style = "background-color:#494e8f;">&nbsp;</td>
+					<td style = "background-color:#405191;">&nbsp;</td>
+					<td style = "background-color:#3071a6;">&nbsp;</td>
+					<td style = "background-color:#29a5b4;">&nbsp;</td>
+					
+					<td style = "background-color:#44ab8c;">&nbsp;</td>
+					<td style = "background-color:#48a85b;">&nbsp;</td>
+					<td style = "background-color:#61aa54;">&nbsp;</td>
+					<td style = "background-color:#8bb449;">&nbsp;</td>
+					
+					<td style = "background-color:#b7ac3e;">&nbsp;</td>
+					<td style = "background-color:#b97438;">&nbsp;</td>
+					<td style = "background-color:#b93530;">&nbsp;</td>
+					<td style = "background-color:#a72d36;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#95253c;">&nbsp;</td>
+					<td style = "background-color:#912a76;">&nbsp;</td>
+					<td style = "background-color:#863c89;">&nbsp;</td>
+					<td style = "background-color:#693e88;">&nbsp;</td>
+					
+					<td style = "background-color:#403f85;">&nbsp;</td>
+					<td style = "background-color:#3a4286;">&nbsp;</td>
+					<td style = "background-color:#19668f;">&nbsp;</td>
+					<td style = "background-color:#008c92;">&nbsp;</td>
+					
+					<td style = "background-color:#00957d;">&nbsp;</td>
+					<td style = "background-color:#0c9556;">&nbsp;</td>
+					<td style = "background-color:#429553;">&nbsp;</td>
+					<td style = "background-color:#77974b;">&nbsp;</td>
+					
+					<td style = "background-color:#908d41;">&nbsp;</td>
+					<td style = "background-color:#956830;">&nbsp;</td>
+					<td style = "background-color:#952b29;">&nbsp;</td>
+					<td style = "background-color:#87212a;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#79172a;">&nbsp;</td>
+					<td style = "background-color:#792464;">&nbsp;</td>
+					<td style = "background-color:#6e2e76;">&nbsp;</td>
+					<td style = "background-color:#513074;">&nbsp;</td>
+					
+					<td style = "background-color:#382e71;">&nbsp;</td>
+					<td style = "background-color:#303870;">&nbsp;</td>
+					<td style = "background-color:#214e77;">&nbsp;</td>
+					<td style = "background-color:#017079;">&nbsp;</td>
+					
+					<td style = "background-color:#007a67;">&nbsp;</td>
+					<td style = "background-color:#107b48;">&nbsp;</td>
+					<td style = "background-color:#3b7b45;">&nbsp;</td>
+					<td style = "background-color:#657b42;">&nbsp;</td>
+					
+					<td style = "background-color:#77733d;">&nbsp;</td>
+					<td style = "background-color:#795025;">&nbsp;</td>
+					<td style = "background-color:#77221d;">&nbsp;</td>
+					<td style = "background-color:#651c21;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#541724;">&nbsp;</td>
+					<td style = "background-color:#591044;">&nbsp;</td>
+					<td style = "background-color:#511f59;">&nbsp;</td>
+					<td style = "background-color:#3c1d59;">&nbsp;</td>
+					
+					<td style = "background-color:#231d57;">&nbsp;</td>
+					<td style = "background-color:#212257;">&nbsp;</td>
+					<td style = "background-color:#0e3b59;">&nbsp;</td>
+					<td style = "background-color:#01535a;">&nbsp;</td>
+					
+					<td style = "background-color:#015c45;">&nbsp;</td>
+					<td style = "background-color:#205c31;">&nbsp;</td>
+					<td style = "background-color:#335c2d;">&nbsp;</td>
+					<td style = "background-color:#475c2b;">&nbsp;</td>
+					
+					<td style = "background-color:#5a5527;">&nbsp;</td>
+					<td style = "background-color:#593d1c;">&nbsp;</td>
+					<td style = "background-color:#541f0e;">&nbsp;</td>
+					<td style = "background-color:#431716;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#33101d;">&nbsp;</td>
+					<td style = "background-color:#331728;">&nbsp;</td>
+					<td style = "background-color:#2e1435;">&nbsp;</td>
+					<td style = "background-color:#241033;">&nbsp;</td>
+					
+					<td style = "background-color:#1c1733;">&nbsp;</td>
+					<td style = "background-color:#101933;">&nbsp;</td>
+					<td style = "background-color:#082335;">&nbsp;</td>
+					<td style = "background-color:#023035;">&nbsp;</td>
+					
+					<td style = "background-color:#033829;">&nbsp;</td>
+					<td style = "background-color:#1a3921;">&nbsp;</td>
+					<td style = "background-color:#233a21;">&nbsp;</td>
+					<td style = "background-color:#2c3b20;">&nbsp;</td>
+					
+					<td style = "background-color:#3a351f;">&nbsp;</td>
+					<td style = "background-color:#382510;">&nbsp;</td>
+					<td style = "background-color:#33140c;">&nbsp;</td>
+					<td style = "background-color:#230b09;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#140306;">&nbsp;</td>
+					<td style = "background-color:#14040c;">&nbsp;</td>
+					<td style = "background-color:#140817;">&nbsp;</td>
+					<td style = "background-color:#0c0614;">&nbsp;</td>
+					
+					<td style = "background-color:#080614;">&nbsp;</td>
+					<td style = "background-color:#060814;">&nbsp;</td>
+					<td style = "background-color:#040a14;">&nbsp;</td>
+					<td style = "background-color:#031014;">&nbsp;</td>
+					
+					<td style = "background-color:#03140e;">&nbsp;</td>
+					<td style = "background-color:#081a0c;">&nbsp;</td>
+					<td style = "background-color:#0e1c0a;">&nbsp;</td>
+					<td style = "background-color:#141c0a;">&nbsp;</td>
+					
+					<td style = "background-color:#191909;">&nbsp;</td>
+					<td style = "background-color:#170e06;">&nbsp;</td>
+					<td style = "background-color:#140604;">&nbsp;</td>
+					<td style = "background-color:#140604;">&nbsp;</td>
+				</tr>
+				<tr>	
+					<td style = "background-color:#ffffff;">&nbsp;</td>
+					<td style = "background-color:#eeeeee;">&nbsp;</td>
+					<td style = "background-color:#dddddd;">&nbsp;</td>
+					<td style = "background-color:#cccccc;">&nbsp;</td>
+					
+					<td style = "background-color:#bbbbbb;">&nbsp;</td>
+					<td style = "background-color:#aaaaaa;">&nbsp;</td>
+					<td style = "background-color:#999999;">&nbsp;</td>
+					<td style = "background-color:#888888;">&nbsp;</td>
+					
+					<td style = "background-color:#777777;">&nbsp;</td>
+					<td style = "background-color:#666666;">&nbsp;</td>
+					<td style = "background-color:#555555;">&nbsp;</td>
+					<td style = "background-color:#444444;">&nbsp;</td>
+					
+					<td style = "background-color:#333333;">&nbsp;</td>
+					<td style = "background-color:#222222;">&nbsp;</td>
+					<td style = "background-color:#111111;">&nbsp;</td>
+					<td style = "background-color:#000000;">&nbsp;</td>
+				</tr>
+			</table>
+			<div class="row-fluid">
+				<div id = "id_div_color_holder" class = "span6"></div>
+				<div id = "id_div_button_holder" class = "span6"></div>
+			</div>
+			
+		</div>
+                <div id = "id_main_container" class="container-fluid span8 well">
+                
+                    <div class="row-fluid">
+                    
+                    	{% for img in image_list %}
+                    
+                            <div id = "id_img_container" class = "span4">
+                            
+                                <div style = "position: absolute;">
+                                    <!--
+                                        <div class="well well-small" title = "containsRadioButtons" style = "position: relative;">    
+                                              <input type="radio" class="btn btn-small" name="final" />
+                                              <span class="label label-success" style = "vertical-align:middle;">Final</span>
+                                        </div>
+                                    -->
+                                    <input style = "position: absolute;" type="text" name="{{ img.link }}" data-slider="true" data-slider-highlight="true" data-slider-range="-1, 1" data-slider-step="0.1" data-slider-snap="true">
+                                
+                                </div>
+                            
+                                <img id="id_img_tmp" src="{{ img.image }}" />
+                                
+                            
+                            </div>
+                            
+                            {% if forloop.last %}
+                            
+                               </div>
+    
+                            {% endif %}
+                            
+                            {% if forloop.counter|divisibleby:"2" %}
+                                
+                                <script>
+                                    
+                                    rowCount += 1;
+                                    
+                                </script>            
+                    
+                                </div>
+                            
+                                <div class="row-fluid">
+                            
+                            
+                                    
+                            {% endif %}
+                    	
+                    	{% endfor %}
+                    
+             
+                    </div>
+                    
+                </div>
+
+            </div>
+            
+            <!-- Modal -->
+            <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">Congratulations!!!</h3>
+              </div>
+              <div class="modal-body">
+                <p>You have finished the search.</p>
+              </div>
+              <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+                <input type="submit" name="action" value="Finish!" class="btn btn-primary">
+              </div>
+            </div>
+        
+  	</form>
+  		
+	</body>
+
+</html>

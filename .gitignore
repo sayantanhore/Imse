@@ -1,0 +1,8 @@
+# Ignore these files
+
+
+*.pyc
+*.swp
+*.py~
+*.html~
+*.css~

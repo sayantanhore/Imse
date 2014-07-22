@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<title>Imse</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- Bootstrap -->
+	
+	<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+	<link href='http://fonts.googleapis.com/css?family=Dosis|Titillium+Web' rel='stylesheet' type='text/css'>
+	<link href="/static/Intelligence/stylesheets/start.css" rel='stylesheet' type='text/css'>
+	<link href="/static/stylesheets/jquery.mCustomScrollbar.css" rel="stylesheet" type="text/css" />
+	
+	<script src="/static/scripts/path.js"></script>
+	<script src="/static/scripts/jquery-1.10.1.min.js"></script>
+	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
+	<script src="/static/scripts/jquery.mCustomScrollbar.min.js"></script>
+	<!--
+	<link href="../Imse/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+	<link href='http://fonts.googleapis.com/css?family=Dosis|Titillium+Web' rel='stylesheet' type='text/css'>
+	<link href="../Imse/static/stylesheets/start.css" rel='stylesheet' type='text/css'>
+		
+	<script src="../Imse/static/scripts/jquery-1.10.1.min.js"></script>
+	<script src="../Imse/static/bootstrap/js/bootstrap.min.js"></script>
+	<script src="../Imse/static/scripts/jquery.validate.min.js"></script>
+    -->  
+    <script>
+        
+    	$(document).ready(function(){
+            //alert(document.location.href);
+            var url = document.location.href;
+            
+            // Get the project path
+            
+            PATH = pathGenerator(url);
+            
+            if(url.search("GP-SOM") !== -1){
+                $("input[name = 'algorithm']").val("GP-SOM");
+                console.log($("input[name = 'algorithm']").val());
+            }
+            else if(url.search("Exploitation") !== -1){
+                $("input[name = 'algorithm']").val("Exploitation");
+                console.log($("input[name = 'algorithm']").val());
+            }
+            else if(url.search("Random") !== -1){
+                $("input[name = 'algorithm']").val("Random");
+                console.log($("input[name = 'algorithm']").val());
+            }
+            $("input[name = 'imagesnumiteration']").val(18);
+            
+            // Set the target text
+            
+            var searchStr = url.substring(url.lastIndexOf("searchfor") + "searchfor".length + 1).replace(/_/g, " ");
+            $("input[name = 'category']").val(searchStr);
+            $("span#id_target").text(searchStr);
+            /*
+            if(targetStr.search("Night") != -1){
+                $("input[name = 'category']").val("Night");
+            }
+            else if(targetStr.search("Walk") != -1){
+                $("input[name = 'category']").val("Walk");
+            }
+            else if(targetStr.search("Waterfall") != -1){
+                $("input[name = 'category']").val("Waterfall");
+            }
+            */
+    		var body= $("body");
+    		
+            
+			//body.css("margin-top", ($(window).height() - $("div.hero-unit").height() - $("div.navbar-fixed-top").height())/2  + 'px');
+            $("div.hero-unit").css("margin-top", ($(window).height() -  $("div.navbar-fixed-top").height() - $("div.hero-unit").height()) / 2)
+            $("div.hero-unit").css("padding-top", "35px")
+            $("div.hero-unit").css("padding-left", "40px")
+            $("div.hero-unit").css("padding-bottom", "35px")
+            $("div.hero-unit").css("padding-right", "10px")
+			
+			//$(".span4").css({"height": 300, "width": 300, "border": "1px solid"});
+    		
+            // Setting dimension of image - container
+				
+            var widthOfImageContainer = $(".span7 .row-fluid div").css("width").replace("px", "");
+            
+            // Setting height
+            
+            $(".span7 .row-fluid div").css("height", widthOfImageContainer+"px");
+            
+            var heightOfImageContainer = widthOfImageContainer;
+            
+            $("div.span7 .row-fluid").css("padding-bottom", 20 + "px");
+            
+    		var img = $(".span4 img");
+				
+            img.on("load", function(){
+            
+                img_width = $(this).width();
+                img_height = $(this).height();
+                
+                $(this).parent().css("text-align", "center");
+                
+                if(img_width >= img_height){
+                
+                    $(this).css("width", (widthOfImageContainer - 5) + "px");
+                    
+                    //if(img_width >= img_height){
+                    
+                        $(this).css({"margin-top": ((heightOfImageContainer - $(this).height())/2) + "px"});
+                        
+                    //}
+                    //else{
+                    
+                        //$(this).css({"margin-top": (heightOfImageContainer - $(this).height())/4 + "px"});
+                    
+                    //}
+                    //$(this).css({"padding-left": "2px", "padding-right": "2px"});
+                
+                }
+                else{
+                
+                    $(this).css("height", heightOfImageContainer -5 + "px");
+                    
+                    //$(this).css({"margin-top": 6 + "px", "margin-bottom": 6 + "px"});
+                    $(this).css({"margin-top": ((heightOfImageContainer - $(this).height())/2) + "px"});
+                    
+                    $(this).css({"margin-left": ((widthOfImageContainer - $(this).width())/2) + "px", "margin-right": (widthOfImageContainer - $(this).width())/2 + "px"});
+                    //$(this).css({"padding-top": 2, "padding-bottom": 2});
+                
+                }
+                //console.log("Width :: "+$(this).width());
+                
+                // Adding polaroid effect to image container
+                
+                $(this).parent().addClass("img-polaroid");
+
+            });
+    		
+			
+			
+			
+			//$("#id_img_reference").css({"max-height": 300, "max-width": 300})
+
+			
+			//$(".span4").css({"align" : "center", "vertical-align": "bottom"});    		
+			
+            $("button.btn-primary").on("click", function(event){
+                if ($("input[name = 'username']").val() == ""){
+                    $("input[name = 'username']").parent().parent().addClass("error");
+                    event.preventDefault();
+                }
+            });
+			
+            $("input[name = 'username']").on("keypress", function(event){
+                $("input[name = 'username']").parent().parent().removeClass("error");
+            });
+            
+            // Fill Image category dropdown
+            
+            $("select[name = 'category']").empty(); // empty the dropdown (if necessarry)
+            $.getJSON("/static/Intelligence/scripts/tags.json", function(data){
+                $(data).each(function(iIndex, element) {
+                    $("select[name = 'category']").append('<option>' + element + '</option>');
+                });
+            });
+            
+            // Add custom scrollbar
+            
+            $("#id_instruction.span3").mCustomScrollbar({
+            
+                theme:"dark"
+                
+            });
+            
+		// Setting form-action
+		
+		$("form").attr("action", PATH + "search/start")
+    	
+    	});
+    </script>
+  </head>
+  <body>
+    
+    <!-- Start Navbar -->
+    
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">ImSe</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li><a href="#about">About</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+    
+    
+	<!-- End Navbar -->    
+    
+    
+    <div id = "id_container" class = "container">
+    	<div class = "hero-unit">
+    		<h2>Welcome, to Target Search</h2>
+    		<p class = "muted"><small>This is ImSe, an exploratory time-efficient image retrieval system. To know more <a href = "#">click here</a>. </small></p>
+    		<div class="row">
+  				<div id = "id_instruction" class="span3" style="overflow:auto; height: 300px;">
+                    <p class = "muted"><u>Instructions</u></p>
+                    <small>
+                        <p class = "muted">Please look for images of a <b><span id = "id_target"></span></b> as shown in the sample images.
+                        </p><p class = "muted">A slider appears <i>onmouseover</i> each image. Transparency of an image changes with rating (slider value). An image with highest rating (+1) is most prominent and with lowest rating (-1) hardly appears.</p>
+                        <p class = "muted">Give rating to images. Provide minimum to maximum rating according to relevance and your personal liking. The system only takes color into account so keep in mind that while giving feedback.</p>
+                    </small>
+                </div>
+                
+  				<div id = "id_form_control" class="span7">
+  					<form class = "form-vertical"  action="" method="get">
+  					
+                        
+						<div class="control-group">
+						<div class="controls form-inline">
+							<label class="control-label" for="select01">Username</label>
+							<input type="text" class="form-control" name = "username" placeholder="Enter name">
+							<!--
+							<label class="control-label" for="select01">Category</label>
+							<select id="select01" name="category">  
+							<option></option>
+							</select>
+							-->
+						</div>
+						</div>
+									
+						
+						<input type = "hidden" name = "algorithm" />
+						<input type = "hidden" name = "imagesnumiteration" />
+						<input type = "hidden" name = "category" />
+						
+						<div class="row-fluid">
+						
+						{% for img in image_list %}
+							<div class = "span4">
+							
+							<div style = "">
+								<img id="id_img_tmp" src="{{ img.image }}" />
+							</div>
+							
+							</div>
+						{% endfor %}
+						
+						</div>
+						
+						<!--
+						<div class="row">
+						<div class="span3">
+							<img class="img-polaroid" src = "/static/images/im12850.jpg"/>
+						</div>
+						<div class="span3">
+							<img class="img-polaroid" src = "/static/images/im4159.jpg"/>
+						</div>
+						
+						</div>
+						-->
+						<div class="control-group">  
+							<!--<label class="control-label" for="optionsCheckbox">Debug mode</label>-->
+							<div class="controls">  
+				<!--
+							<label class="checkbox">  
+								<input type="checkbox" id="optionsCheckbox"  name="debug" value="1">  
+								Show distances on hover
+							</label>
+				<br/>
+				-->
+							
+							<button type="submit" class="btn btn-primary">Let's Go</button>
+							</div>  
+						</div>
+								
+					  
+					</form>
+  				</div>
+			</div>
+    		
+    	</div>
+    </div>
+    
+  </body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Imse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    
+	<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+	<link href='http://fonts.googleapis.com/css?family=Dosis|Titillium+Web' rel='stylesheet' type='text/css'>
+	<link href="/static/Intelligence/stylesheets/start.css" rel='stylesheet' type='text/css'>
+   	
+	<script src="/static/scripts/path.js"></script>
+	<script src="/static/scripts/jquery-1.10.1.min.js"></script>
+	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <!--
+    <link href="../Imse/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Dosis|Titillium+Web' rel='stylesheet' type='text/css'>
+    <link href="../Imse/static/stylesheets/start.css" rel='stylesheet' type='text/css'>
+   	
+    <script src="../Imse/static/scripts/jquery-1.10.1.min.js"></script>
+    <script src="../Imse/static/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../Imse/static/scripts/jquery.validate.min.js"></script>
+    -->  
+    <script>
+        
+    	$(document).ready(function(){
+			
+			var url = document.location.href;
+            
+            // Get the project path
+            
+			PATH = pathGenerator(url);
+			if(typeof PATH == 'undefined'){
+				PATH = "";			
+			}
+			console.log("PATH :: " + PATH);
+			var body= $("body");
+    		
+            console.log("Document Height :: " + $(document).height())
+            console.log("Window Height :: " + $(window).height())
+            console.log("Body Height :: " + $("body").height())
+            console.log("Hero Height :: " + $("div.hero-unit").height())
+			//body.css("margin-top", ($(window).height() - $("div.hero-unit").height() - $("div.navbar-fixed-top").height())/2  + 'px');
+            $("div.hero-unit").css("margin-top", ($(window).height() -  $("div.navbar-fixed-top").height() - $("div.hero-unit").height()) / 2)
+            $("div.hero-unit").css("padding-top", "35px")
+            $("div.hero-unit").css("padding-left", "40px")
+            $("div.hero-unit").css("padding-bottom", "35px")
+            $("div.hero-unit").css("padding-right", "10px")
+			
+			//$(".span4").css({"height": 300, "width": 300, "border": "1px solid"});
+    		
+    		var img = $("#id_img_reference");
+    		
+    		img.on("load", function(){
+    		
+    			var img_width = img.width();
+				var img_height = img.height();
+    		
+    			console.log("Width :: " + img_width);
+				console.log("Height :: " + img_height);
+				
+				
+				
+				if(img_width >= img_height){
+				
+					$("#id_img_reference").css({"width": 320});
+					
+					img_padd = 190 - (img_height / 2);
+					
+					$("#id_img_reference").css("margin-top", img_padd);
+					
+				}
+				else{
+				
+					$("#id_img_reference").css({"height": 320});
+					
+				}
+    		
+    		});
+    		
+			
+			
+			
+			//$("#id_img_reference").css({"max-height": 300, "max-width": 300})
+
+			
+			//$(".span4").css({"align" : "center", "vertical-align": "bottom"});    		
+			
+            $("button.btn-primary").on("click", function(event){
+                if ($("input[name = 'username']").val() == ""){
+                    $("input[name = 'username']").parent().parent().addClass("error");
+                    event.preventDefault();
+                }
+            });
+			
+            $("input[name = 'username']").on("keypress", function(event){
+                $("input[name = 'username']").parent().parent().removeClass("error");
+            });
+            
+            // Fill Image category dropdown
+            
+            $("select[name = 'category']").empty(); // empty the dropdown (if necessarry)
+            $.getJSON("/static/Intelligence/scripts/tags.json", function(data){
+                $(data).each(function(iIndex, element) {
+                    $("select[name = 'category']").append('<option>' + element + '</option>');
+                });
+            });
+            
+		// Setting form-action
+		
+		//$("form").attr("action", PATH + "search/start")
+    	
+    	});
+    </script>
+  </head>
+  <body>
+    
+    <!-- Start Navbar -->
+    
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">ImSe</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li><a href="#about">About</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+    
+    
+	<!-- End Navbar -->    
+    
+    
+    <div id = "id_container" class = "container">
+    	<div class = "hero-unit">
+    		<h2>Welcome</h2>
+    		<p class = "muted"><small>This is ImSe, an exploratory time-efficient image retrieval system. To know more <a href = "#">click here</a>. </small></p>
+    		<div class="row">
+  				<div class="span5"><img id = "id_img_reference" src="{{ image }}" class="img-polaroid"/></div>
+                
+  				<div id = "id_form_control" class="span5">
+  					<form class = "form-horizontal"  action="/search/start/" method="get">
+  					<fieldset>
+  					<legend><span><i class="icon-circle-arrow-down"></i>&nbsp;</span>ImSe control panel</legend>
+						<div class="control-group"> 
+							<label class="control-label" for="select01">Username</label>  
+							<div class="controls">  
+							  <input type="text" class="form-control" name = "username" placeholder="Enter your name">
+							</div>
+                            
+					  	</div>
+                        
+                        <div class="control-group">  
+							<label class="control-label" for="select01">Category</label>  
+							<div class="controls">  
+							  <select id="select01" name="category">  
+								<option></option>
+							  </select>  
+							</div>  
+					  	</div>
+                        
+                        
+  						<div class="control-group">  
+							<label class="control-label" for="select01">Select Algorithm</label>  
+							<div class="controls">  
+							  <select id="select01" name = "algorithm">  
+								<option>GP-SOM</option>  
+								<option>GP-SOM-multi</option> 
+								<option>GP-UCB</option> 
+								<option>Exploitation</option>  
+								<option>Random</option>  
+							  </select>  
+							</div>  
+					  	</div>
+					  	<div class="control-group">  
+							<label class="control-label" for="select01">No. of images per iteration</label>  
+							<div class="controls">  
+							  <select id="select01" name="imagesnumiteration">  
+								<option>4</option>
+								  
+							  </select>  
+							</div>  
+					  	</div>
+                        
+                        
+					  	<div class="control-group">  
+							<!--<label class="control-label" for="optionsCheckbox">Debug mode</label>-->
+							<div class="controls">  
+                                <!--
+							  <label class="checkbox">  
+								<input type="checkbox" id="optionsCheckbox"  name="debug" value="1">  
+								Show distances on hover
+							  </label>
+                                <br/>
+                                -->
+							  
+							  <button type="submit" class="btn btn-primary">Let's Go</button>
+							</div>  
+					  </div>
+					  
+					  </fieldset>
+					</form>
+  				</div>
+			</div>
+    		
+    	</div>
+    </div>
+    
+  </body>
+</html>

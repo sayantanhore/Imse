@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<title>IMSE</title>
+		<meta name = "viewport" content = "width = device-width, initial-scale = 1.0">
+		<link rel="stylesheet" type="text/css" href="/static/lib/bootstrap3/css/bootstrap.min.css">
+		<link rel="stylesheet" href="/static/icons/font_awesome/css/font-awesome.min.css">
+		<link rel="stylesheet" type="text/css" href="/static/lib/slider/css/slider.css">
+		<link rel="stylesheet" type="text/css" href="/static/css/search.css">
+
+		<script type="text/javascript" src = "/static/lib/jQuery/jquery-1.11.0.js"></script>
+		<script type="text/javascript" src = "/static/lib/bootstrap3/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src = "/static/lib/slider/js/bootstrap-slider.js"></script>
+		<script type="text/javascript" src = "/static/js/search.js"></script>
+		<script type="text/javascript" src = "/static/js/inset.js"></script>
+		<script type="text/javascript" src = "/static/js/imageBox.js"></script>
+		<script type="text/javascript" src = "/static/lib/spin/spin.min.js"></script>
+		<script type="text/javascript">
+			
+		</script>
+	</head>
+	<body>
+		<!-- Login Screen -->
+		<div class="modal fade" id="id_login" data-backdrop="static" data-keyboard="false">
+		  <div class="modal-dialog">
+		    <div class="modal-content">
+		      <div class="modal-header">
+		        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+		        <h4 class="modal-title">Who are you?</h4>
+		      </div>
+		      <div class="modal-body">
+		        <div class="form-group">
+		        	<label for="id_username" class="col-md-2 control-label">Username</label>
+				    <div class="col-md-10">
+				      <input type="text" class="form-control" id="id_username" placeholder="Enter your Username">
+				    </div>
+				  </div>
+		      </div>
+		      <div class="modal-footer">
+		        <button type="button" class="btn btn-default btn-sm">Reset</button>
+		        <button type="button" class="btn btn-primary btn-sm btn-modal">Enter</button>
+		      </div>
+		    </div><!-- /.modal-content -->
+		  </div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
+
+		<!-- Mask -->
+		<div id = "id_mask">
+			<p>Loading, Please wait ...</p>
+		</div>
+
+
+		<div class = "navbar navbar-inverse navbar-static-top">
+		<!--
+		<input type="text" class="span2 slider" value="" data-slider-min="-10" data-slider-max="10" data-slider-step="1" data-slider-value="0" data-slider-orientation="horizontal" style="margin-top: 50px">
+		-->
+			<div id = "id_navbar" class = "container">
+				<a href = "#" class = "navbar-brand">IMSE</a>
+
+				<button class = "navbar-toggle" data-toggle = "collapse" data-target = ".navHeaderCollapse">
+					<span class = "icon-bar"></span>
+					<span class = "icon-bar"></span>
+					<span class = "icon-bar"></span>
+				</button>
+
+				<div class = "collapse navbar-collapse navHeaderCollapse">
+					<ui class = "nav navbar-nav navbar-left">
+						<li class = "active"><a href = "#">Home</a></li>
+						<li><a href = "#">Settings</a></li>
+						<li><a href = "#">About</a></li>
+						<li><a href = "#">Contact</a></li>
+					</ui>
+					<ui class = "nav navbar-nav navbar-right">
+						<li class = "active"><a href = "#">Accept</a></li>
+						<li  class = "active"><a href = "#">Finish</a></li>
+					</ui>
+				</div>
+			</div>
+		</div>
+
+		<div class = "container-fluid">
+		
+
+			<div class = "row">
+				<div class = "col-md-3">
+					<div id = "id_left_sidebar" class="panel panel-default">
+					  <div class="panel-body">
+						<ul class="nav nav-tabs nav-justified">
+						  <li class="active"><a href="#color" data-toggle = "tab">Color</a></li>
+						  <li><a href="#">Texture</a></li>
+						  <li><a href="#">Shape</a></li>
+						</ul>
+						<div class = "tab-content">
+							<div class = "tab-pane active" id = "color">
+								<div id = "id_color_container" class = "table-responsive thumbnail">
+									<table id="id_table_color_palette" class="table-responsive table-condensed">
+										<tr>	
+											<td style = "background-color:#fddce5;"><div>&nbsp;</div></td>
+											<td style = "background-color:#fadcec;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f6daed;"><div>&nbsp;</div></td>
+											<td style = "background-color:#eedced;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#e4daee;"><div>&nbsp;</div></td>
+											<td style = "background-color:#dfe1f1;"><div>&nbsp;</div></td>
+											<td style = "background-color:#dfeefa;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e1f5fa;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#e1f3f0;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e2f1de;"><div>&nbsp;</div></td>
+											<td style = "background-color:#eaf3d9;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f8f9dc;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#fefcdf;"><div>&nbsp;</div></td>
+											<td style = "background-color:#fff1dc;"><div>&nbsp;</div></td>
+											<td style = "background-color:#fee1dc;"><div>&nbsp;</div></td>
+											<td style = "background-color:#fcd4d7;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#fac7d2;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f5c7da;"><div>&nbsp;</div></td>
+											<td style = "background-color:#edc7dc;"><div>&nbsp;</div></td>
+											<td style = "background-color:#dfc7df;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#d0c4e3;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cbcbe7;"><div>&nbsp;</div></td>
+											<td style = "background-color:#c9e1f6;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cdecf5;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#ceeae5;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cee6c9;"><div>&nbsp;</div></td>
+											<td style = "background-color:#d7eac3;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f0f3c7;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#fcf6c9;"><div>&nbsp;</div></td>
+											<td style = "background-color:#ffe7c9;"><div>&nbsp;</div></td>
+											<td style = "background-color:#fdcec7;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f9b8be;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#f5a3b6;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e7a6c1;"><div>&nbsp;</div></td>
+											<td style = "background-color:#d3a7c4;"><div>&nbsp;</div></td>
+											<td style = "background-color:#bfa5c4;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#ada3c7;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a7aad0;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a9c9ed;"><div>&nbsp;</div></td>
+											<td style = "background-color:#aed7ea;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#afd6d0;"><div>&nbsp;</div></td>
+											<td style = "background-color:#add1aa;"><div>&nbsp;</div></td>
+											<td style = "background-color:#bed69f;"><div>&nbsp;</div></td>
+											<td style = "background-color:#dfe8a4;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#fcf1a6;"><div>&nbsp;</div></td>
+											<td style = "background-color:#ffcfa5;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f9aca5;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f397a0;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#ee839b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#d689ae;"><div>&nbsp;</div></td>
+											<td style = "background-color:#bf8bb2;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a387b2;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#8a82b2;"><div>&nbsp;</div></td>
+											<td style = "background-color:#848bba;"><div>&nbsp;</div></td>
+											<td style = "background-color:#8ab7e1;"><div>&nbsp;</div></td>
+											<td style = "background-color:#92cde1;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#95c9be;"><div>&nbsp;</div></td>
+											<td style = "background-color:#95c18d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a9c97f;"><div>&nbsp;</div></td>
+											<td style = "background-color:#d0da83;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#f9ea87;"><div>&nbsp;</div></td>
+											<td style = "background-color:#febd84;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f38d84;"><div>&nbsp;</div></td>
+											<td style = "background-color:#ee7b82;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#ea6a81;"><div>&nbsp;</div></td>
+											<td style = "background-color:#ce709e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#b176a2;"><div>&nbsp;</div></td>
+											<td style = "background-color:#8c6ea1;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#716da1;"><div>&nbsp;</div></td>
+											<td style = "background-color:#6b73a7;"><div>&nbsp;</div></td>
+											<td style = "background-color:#73a1d2;"><div>&nbsp;</div></td>
+											<td style = "background-color:#7fc1d9;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#83bfb4;"><div>&nbsp;</div></td>
+											<td style = "background-color:#83ba72;"><div>&nbsp;</div></td>
+											<td style = "background-color:#9abe5e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#c3d268;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#f8e36c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#fcaa6b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#ee796b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#eb626d;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#e84b6e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cb6092;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a5689b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#81659b;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#67669d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#596a9f;"><div>&nbsp;</div></td>
+											<td style = "background-color:#638fc3;"><div>&nbsp;</div></td>
+											<td style = "background-color:#73bdd5;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#7dbca9;"><div>&nbsp;</div></td>
+											<td style = "background-color:#7cb45e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#8aba49;"><div>&nbsp;</div></td>
+											<td style = "background-color:#bccd40;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#f6da46;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f99c47;"><div>&nbsp;</div></td>
+											<td style = "background-color:#ec6449;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e94e56;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#e73863;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cb4e8d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a26095;"><div>&nbsp;</div></td>
+											<td style = "background-color:#7e6199;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#5d629b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#4b669e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#5486bd;"><div>&nbsp;</div></td>
+											<td style = "background-color:#6cbdd4;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#75baa1;"><div>&nbsp;</div></td>
+											<td style = "background-color:#73b15a;"><div>&nbsp;</div></td>
+											<td style = "background-color:#80b74c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#b4c93d;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#f6d727;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f68e2b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e84b33;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e73843;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#e72653;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cd498c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a05e92;"><div>&nbsp;</div></td>
+											<td style = "background-color:#7b5f98;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#53609a;"><div>&nbsp;</div></td>
+											<td style = "background-color:#46639c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#4e80b8;"><div>&nbsp;</div></td>
+											<td style = "background-color:#6abbd3;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#71b99e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#6fb058;"><div>&nbsp;</div></td>
+											<td style = "background-color:#7eb44d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#adc43f;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#f1d41c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#f18828;"><div>&nbsp;</div></td>
+											<td style = "background-color:#e7402d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#de323c;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#d6254b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#c24188;"><div>&nbsp;</div></td>
+											<td style = "background-color:#9d5990;"><div>&nbsp;</div></td>
+											<td style = "background-color:#765a95;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#4e5d98;"><div>&nbsp;</div></td>
+											<td style = "background-color:#445e9a;"><div>&nbsp;</div></td>
+											<td style = "background-color:#437eb1;"><div>&nbsp;</div></td>
+											<td style = "background-color:#55b4c7;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#69b498;"><div>&nbsp;</div></td>
+											<td style = "background-color:#68ac59;"><div>&nbsp;</div></td>
+											<td style = "background-color:#70af50;"><div>&nbsp;</div></td>
+											<td style = "background-color:#9fc043;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#d5c427;"><div>&nbsp;</div></td>
+											<td style = "background-color:#d9802d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#d73b2e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#c83239;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#ba2944;"><div>&nbsp;</div></td>
+											<td style = "background-color:#b13381;"><div>&nbsp;</div></td>
+											<td style = "background-color:#914c8e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#6f4d8f;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#494e8f;"><div>&nbsp;</div></td>
+											<td style = "background-color:#405191;"><div>&nbsp;</div></td>
+											<td style = "background-color:#3071a6;"><div>&nbsp;</div></td>
+											<td style = "background-color:#29a5b4;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#44ab8c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#48a85b;"><div>&nbsp;</div></td>
+											<td style = "background-color:#61aa54;"><div>&nbsp;</div></td>
+											<td style = "background-color:#8bb449;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#b7ac3e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#b97438;"><div>&nbsp;</div></td>
+											<td style = "background-color:#b93530;"><div>&nbsp;</div></td>
+											<td style = "background-color:#a72d36;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#95253c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#912a76;"><div>&nbsp;</div></td>
+											<td style = "background-color:#863c89;"><div>&nbsp;</div></td>
+											<td style = "background-color:#693e88;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#403f85;"><div>&nbsp;</div></td>
+											<td style = "background-color:#3a4286;"><div>&nbsp;</div></td>
+											<td style = "background-color:#19668f;"><div>&nbsp;</div></td>
+											<td style = "background-color:#008c92;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#00957d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#0c9556;"><div>&nbsp;</div></td>
+											<td style = "background-color:#429553;"><div>&nbsp;</div></td>
+											<td style = "background-color:#77974b;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#908d41;"><div>&nbsp;</div></td>
+											<td style = "background-color:#956830;"><div>&nbsp;</div></td>
+											<td style = "background-color:#952b29;"><div>&nbsp;</div></td>
+											<td style = "background-color:#87212a;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#79172a;"><div>&nbsp;</div></td>
+											<td style = "background-color:#792464;"><div>&nbsp;</div></td>
+											<td style = "background-color:#6e2e76;"><div>&nbsp;</div></td>
+											<td style = "background-color:#513074;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#382e71;"><div>&nbsp;</div></td>
+											<td style = "background-color:#303870;"><div>&nbsp;</div></td>
+											<td style = "background-color:#214e77;"><div>&nbsp;</div></td>
+											<td style = "background-color:#017079;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#007a67;"><div>&nbsp;</div></td>
+											<td style = "background-color:#107b48;"><div>&nbsp;</div></td>
+											<td style = "background-color:#3b7b45;"><div>&nbsp;</div></td>
+											<td style = "background-color:#657b42;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#77733d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#795025;"><div>&nbsp;</div></td>
+											<td style = "background-color:#77221d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#651c21;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#541724;"><div>&nbsp;</div></td>
+											<td style = "background-color:#591044;"><div>&nbsp;</div></td>
+											<td style = "background-color:#511f59;"><div>&nbsp;</div></td>
+											<td style = "background-color:#3c1d59;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#231d57;"><div>&nbsp;</div></td>
+											<td style = "background-color:#212257;"><div>&nbsp;</div></td>
+											<td style = "background-color:#0e3b59;"><div>&nbsp;</div></td>
+											<td style = "background-color:#01535a;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#015c45;"><div>&nbsp;</div></td>
+											<td style = "background-color:#205c31;"><div>&nbsp;</div></td>
+											<td style = "background-color:#335c2d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#475c2b;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#5a5527;"><div>&nbsp;</div></td>
+											<td style = "background-color:#593d1c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#541f0e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#431716;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#33101d;"><div>&nbsp;</div></td>
+											<td style = "background-color:#331728;"><div>&nbsp;</div></td>
+											<td style = "background-color:#2e1435;"><div>&nbsp;</div></td>
+											<td style = "background-color:#241033;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#1c1733;"><div>&nbsp;</div></td>
+											<td style = "background-color:#101933;"><div>&nbsp;</div></td>
+											<td style = "background-color:#082335;"><div>&nbsp;</div></td>
+											<td style = "background-color:#023035;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#033829;"><div>&nbsp;</div></td>
+											<td style = "background-color:#1a3921;"><div>&nbsp;</div></td>
+											<td style = "background-color:#233a21;"><div>&nbsp;</div></td>
+											<td style = "background-color:#2c3b20;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#3a351f;"><div>&nbsp;</div></td>
+											<td style = "background-color:#382510;"><div>&nbsp;</div></td>
+											<td style = "background-color:#33140c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#230b09;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#140306;"><div>&nbsp;</div></td>
+											<td style = "background-color:#14040c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#140817;"><div>&nbsp;</div></td>
+											<td style = "background-color:#0c0614;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#080614;"><div>&nbsp;</div></td>
+											<td style = "background-color:#060814;"><div>&nbsp;</div></td>
+											<td style = "background-color:#040a14;"><div>&nbsp;</div></td>
+											<td style = "background-color:#031014;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#03140e;"><div>&nbsp;</div></td>
+											<td style = "background-color:#081a0c;"><div>&nbsp;</div></td>
+											<td style = "background-color:#0e1c0a;"><div>&nbsp;</div></td>
+											<td style = "background-color:#141c0a;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#191909;"><div>&nbsp;</div></td>
+											<td style = "background-color:#170e06;"><div>&nbsp;</div></td>
+											<td style = "background-color:#140604;"><div>&nbsp;</div></td>
+											<td style = "background-color:#140604;"><div>&nbsp;</div></td>
+										</tr>
+										<tr>	
+											<td style = "background-color:#ffffff;"><div>&nbsp;</div></td>
+											<td style = "background-color:#eeeeee;"><div>&nbsp;</div></td>
+											<td style = "background-color:#dddddd;"><div>&nbsp;</div></td>
+											<td style = "background-color:#cccccc;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#bbbbbb;"><div>&nbsp;</div></td>
+											<td style = "background-color:#aaaaaa;"><div>&nbsp;</div></td>
+											<td style = "background-color:#999999;"><div>&nbsp;</div></td>
+											<td style = "background-color:#888888;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#777777;"><div>&nbsp;</div></td>
+											<td style = "background-color:#666666;"><div>&nbsp;</div></td>
+											<td style = "background-color:#555555;"><div>&nbsp;</div></td>
+											<td style = "background-color:#444444;"><div>&nbsp;</div></td>
+											
+											<td style = "background-color:#333333;"><div>&nbsp;</div></td>
+											<td style = "background-color:#222222;"><div>&nbsp;</div></td>
+											<td style = "background-color:#111111;"><div>&nbsp;</div></td>
+											<td style = "background-color:#000000;"><div>&nbsp;</div></td>
+										</tr>
+									</table>
+								</div>
+							</div>
+							<div class = "tab-pane" id = "texture">
+								Texture
+							</div>
+							<div class = "tab-pane" id = "texture">
+								Shape
+							</div>
+						</div>
+						<div id = "id_colors_picked" class = "row">
+							<div href = "#" class = "thumbnail col-md-3" data-toggle = "tooltip" title = "Click to remove">
+							      
+							</div>
+							<div href = "#" class = "thumbnail col-md-3"  data-toggle = "tooltip" title = "Click to remove">
+							      
+							</div>
+							<div href = "#" class = "thumbnail col-md-3"  data-toggle = "tooltip" title = "Click to remove">
+							      
+							</div>
+							<div href = "#" class = "thumbnail col-md-3"  data-toggle = "tooltip" title = "Click to remove">
+							      
+							</div> 
+							<div href = "#" class = "thumbnail col-md-3"  data-toggle = "tooltip" title = "Click to remove">
+							      
+							</div>
+						</div>
+
+						<div class = "row">
+							<div class = "col-md-6">
+								<button id = "id_reset" class = "btn btn-default btn-small btn-custom">Reset</button>
+							</div>
+							<div class = "col-md-6">
+								<button id = "id_proceed" class = "btn btn-default btn-small btn-custom">Proceed</button>
+							</div>
+						</div>
+						
+					  </div>
+					</div>
+				</div>
+				<div class = "col-md-9">
+					<div id = "id_image_container" class="panel panel-default">
+					  <div class = "panel-body">
+					  	
+					  </div>
+					</div>
+				</div>
+
+			</div>
+
+		</div>
+
+	</body>
+</html>
