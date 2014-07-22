@@ -18,4 +18,4 @@ MEDIA_PATH = '/ldata/IMSE/data/media/'
 
 # For accessing modules from Django dev server
 
-FILE_ROOT_PATH = '/home/lassetyr/programming/Imse/Imse/'
+FILE_ROOT_PATH = '/ldata/IMSE/Imse/Imse/'

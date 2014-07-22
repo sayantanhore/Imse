@@ -88,7 +88,7 @@ class GPSOM(object):
         #mean, var = proxy.gaussian_process(self.image_features, self.feedback, self.shown_images)
         #var, mean = gp.gaussian_process(self.image_features, self.feedback, self.shown_images, debug=True)
         print "After calling gaussian process"
-        ucb = mean + var
+        ucb = mean + 0.002 * var
         print("Hello hello")
         print "Num Predictions" + str(type(num_predictions))
         if num_predictions == 1:

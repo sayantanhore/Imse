@@ -22,7 +22,7 @@ from signal import SIGTERM
 
 # Refer to path/Path.py for current working dataset
 
-p = Popen(["python", "/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/gp_cuda.py"])
+p = Popen(["python", FILE_ROOT_PATH + "Intelligence/GPSOM/gp_cuda.py"])
 
 data_color = numpy.load(DATA_PATH + 'kernel-cl-'+str(IMAGENUM)+'.npy')
 data = data_color
@@ -291,6 +291,7 @@ def do_search(request, state = 'nostart'):
     feedback = [float(f) for f in feedback]
     accepted = request.GET['accepted'].encode("utf-8")
     num_predictions = int(request.GET['num_prediction'].encode("utf-8"))
+    finished = request.GET['finished'].encode("utf-8")
 
         #marks.append(int(request.GET.get('mark'+(Image.objects.get(index=im).filename),0)))
     #print e.algorithm
@@ -332,11 +333,12 @@ def do_search(request, state = 'nostart'):
             ims = predictor.Predict(feedback, False, num_predictions)
         print("Checking ims type :: " + str(ims.shape))
 
-    if request.GET.get('action')=='Finish!':
+    if finished == "true":
         e.finished = True
         e.timefinish = time.time()
         e.save()
-
+        global p
+        p.send_signal(SIGTERM)
         t = get_template('Intelligence/finished.html')
         html = t.render(Context({
                         'iterations': e.iterations
@@ -351,7 +353,8 @@ def do_search(request, state = 'nostart'):
         '''distance = 1-(numpy.load(filename_distance))
         distances = distance[e.target.index,:]
         d = distances[ims]'''
-        e.iterations += 1
+        if num_predictions != 1:
+            e.iterations += 1
         e.save()
 
         print "Hello ..." + str(ims)

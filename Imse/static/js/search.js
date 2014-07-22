@@ -53,7 +53,7 @@ function getFeedback(val){
     	}
     }
     console.log("Feedback :: " + feedback);
-    predict(1);
+    predict(1, false);
 }
 
 
@@ -164,7 +164,7 @@ function loadImage(){
 
 // Global Method: Ajax Call for Image Prediction
 
-function predict(num_prediction){
+function predict(num_prediction, finished){
 		console.log("Predicting");
     	var input_data = {
     		"username": username,
@@ -173,7 +173,8 @@ function predict(num_prediction){
     		"category": "None",
     		"feedback": JSON.stringify(feedback),
     		"accepted": current_image_accepted,
-    		"num_prediction": num_prediction
+    		"num_prediction": num_prediction,
+            "finished": finished
     	};
     	console.log("Predict 2")
 
@@ -548,7 +549,14 @@ $(document).ready(function(){
 
     $(".navbar-right > li:first-child a").click(function(event){
     	feedback = collectFeedback();
-		predict(no_of_shown_images);
+		predict(no_of_shown_images, false);
+    });
+
+
+    $(".navbar-right > li:last-child a").click(function(event){
+        alert("Finishing...");
+    	feedback = collectFeedback();
+		predict(no_of_shown_images, true);
     });
 
 
