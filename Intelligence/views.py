@@ -16,7 +16,8 @@ from Intelligence.Random import Random
 from Intelligence.path.Path import *
 from Intelligence.Util import LoadInitialImages
 
-
+# File to write results into
+results_file = None
 
 data_color = numpy.load(DATA_PATH + 'kernel-cl-'+str(IMAGENUM)+'.npy')
 data = data_color
@@ -61,6 +62,10 @@ def start_search(request):
     # For django local
     html = t.render(Context({'image' : '/media/' + target_img.filename}))
     # For django local
+    # Open file for writing results
+    global results_file
+    results_file = open("/ldata/IMSE/Imse_cpu/Imse/Intelligence/results.csv", "a+")
+
     return HttpResponse(html)
 
 
@@ -255,7 +260,7 @@ def do_search(request, state = 'nostart'):
 
         if e.algorithm =='GP-SOM':
             global predictor
-            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, data, clusters, e.category)
+            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, data, clusters, e.category, results_file)
             '''
             if e.algorithm == 'GP-UCB':
                 predictor = ucbGP.GPUCB(DATA_PATH, e.images_number_iteration, e.images_number_total, e.category)
@@ -329,7 +334,7 @@ def do_search(request, state = 'nostart'):
             ims = predictor.Predict(feedback, False, num_predictions)
 
 
-    if request.GET.get('action')=='Finish!':
+    if finished == "true":
         e.finished = True
         e.timefinish = time.time()
         e.save()
@@ -338,7 +343,10 @@ def do_search(request, state = 'nostart'):
         html = t.render(Context({
                         'iterations': e.iterations
                      }))
-
+        print "Finished, closing file ..."
+        global results_file
+        results_file.close()
+        print "File closed"
         return HttpResponse(html)
 
     else:

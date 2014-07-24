@@ -4,14 +4,16 @@ import random
 import copy
 import GP
 import math
+import time
 from Intelligence.path.Path import *
+import csv
 
 class GPSOM(object):
 
     '''Program parameters'''
     #IMAGES_NUMBER = 1000
 
-    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, data, clusters, category):
+    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, data, clusters, category, file):
         self.setsize = images_number_iteration
         self.images_number = images_number_total
         self.clusters_number = (int(math.ceil(math.sqrt(math.sqrt(self.images_number)))))**2
@@ -22,15 +24,19 @@ class GPSOM(object):
         self.clusters_names = range(self.images_number, self.images_number + self.clusters_number)
         self.images_shown = firstround_images_shown
         self.previouse_images = []
+        self.last_shown_images = None
         self.feedback = []
+        self.exploration_rate = 0.002
         self.iteration = 0
-        self.gp = GP.GP(self.images_number, copy.deepcopy(self.images_shown), self.data)
+        self.sub_iteration = 0
+        self.gp = GP.GP(self.images_number, copy.deepcopy(self.images_shown), self.data, self.exploration_rate)
         self.selected_images = []
         self.chosen_model_vector = None
         self.index_chosen_image = None
         self.chosen_image = None
         self.pseudo_feedback = None
         self.bulk_predicted = False
+        self.csv_file = csv.writer(file, delimiter = ",")
 
     def FirstRound(self):
 
@@ -89,14 +95,23 @@ class GPSOM(object):
 
 
     def Predict(self, feedback, accepted, num_predictions = 1):
+        record = [self.iteration, self.sub_iteration, self.images_shown, feedback, self.exploration_rate]
         if num_predictions == 1:
             print "Num Predictions :: " + str(num_predictions)
             print "Bulk prediction :: " + str(self.bulk_predicted)
             if self.bulk_predicted == True:
                 self.bulk_predicted = False
+                time_start = time.time()
                 image_to_return = self.Predict_n(feedback, True)
+                time_end = time.time()
             else:
+                time_start = time.time()
                 image_to_return = self.Predict_n(feedback, accepted)
+                time_end = time.time()
+            self.sub_iteration += 1
+            record.append([image_to_return])
+            record.append(time_end - time_start)
+            self.csv_file.writerow(record)
             return [image_to_return]
         else:
             print "Num Predictions :: " + str(num_predictions)
@@ -104,6 +119,7 @@ class GPSOM(object):
             images_to_return = []
             feedback = []
             img_counter = num_predictions
+            time_start = time.time()
             while img_counter > 0:
                 if img_counter == num_predictions:
                     if self.bulk_predicted == True:
@@ -111,15 +127,17 @@ class GPSOM(object):
                         images_to_return.append(self.Predict_n(feedback, True))
                     else:
                         images_to_return.append(self.Predict_n(feedback, accepted))
-                    print "First image returned"
                 else:
-                    print "Go for next image"
                     feedback.append(self.pseudo_feedback)
-                    print "Pseudo feedback appended"
                     images_to_return.append(self.Predict_n(feedback, True))
-                    print "Next image returned"
                 img_counter -= 1
+            time_end = time.time()
             self.bulk_predicted = True
+            self.iteration += 1
+            self.sub_iteration = 0
+            record.append(images_to_return)
+            record.append(time_end - time_start)
+            self.csv_file.writerow(record)
             return images_to_return
 
     def Predict_n(self, feedback, accepted = False):
