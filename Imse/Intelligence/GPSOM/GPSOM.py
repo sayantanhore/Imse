@@ -6,13 +6,15 @@ import os, time, xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from subprocess import Popen
 from signal import SIGTERM
+import csv
+import time
 
 class GPSOM(object):
 
     '''Program parameters'''
     #IMAGES_NUMBER = 1000
 
-    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, category):
+    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, category, file):
         print "Inside GPSOM"
         self.image_features = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
         self.first_sample_size = images_number_iteration
@@ -20,12 +22,13 @@ class GPSOM(object):
         self.shown_images = np.array(firstround_images_shown)
         self.feedback_indices = []
         self.feedback = []
+        self.exploration_rate = 0.002
         self.iteration = 0  # TODO: use this to change the exploration/exploitation ratio
+        self.sub_iteration = 0
         self.gp = None
         self.last_selected_image = None
         self.remaining_image_list = np.setdiff1d(np.array([i for i in range(images_number_total)]), self.shown_images)
-        #p = Popen(["python", "/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/gp_cuda.py"])
-        #time.sleep(0.8)
+        self.csv_file = csv.writer(file, delimiter = ",")
 
     def FirstRound(self):
         """Pre-processing stage - sample first set of images
@@ -37,6 +40,7 @@ class GPSOM(object):
         return self.feedback_indices
 
     def Predict(self, feedback, accepted, num_predictions = 1):
+        record = [self.iteration, self.sub_iteration, self.shown_images, feedback, self.exploration_rate]
         print "Inside predict"
         print num_predictions
 
@@ -74,7 +78,9 @@ class GPSOM(object):
             #mean, var = server_proxy.gp(self.image_features, self.feedback, self.shown_images)
             print("Feedback :::: " + str(self.feedback))
             print("Shown Images :::: " + str(self.shown_images))
+            time_start = time.time()
             mean, var = server_proxy.gp(self.feedback + feedback, self.shown_images.tolist())
+            time_end = time.time()
             mean = np.array(mean, dtype = "float32")
             var = np.array(var, dtype = "float32")
             print "2"
@@ -96,6 +102,7 @@ class GPSOM(object):
             chosen_image_indices = np.array([ucb.argmax()])
             print "Chosen Image Incex :: " + str(type(chosen_image_indices))
             self.last_selected_image = chosen_image_indices[0]
+            self.sub_iteration += 1
         else:
             print "Greater than 1"
             print(ucb)
@@ -111,15 +118,20 @@ class GPSOM(object):
             self.shown_images = np.append(self.shown_images, chosen_image_indices)
             # Update the feedback
             self.feedback = self.feedback + feedback
+            self.sub_iteration = 0
+            self.iteration += 1
         print "Image picked up"
         print(type(self.shown_images))
         #self.shown_images = self.shown_images + chosen_image_indices
         #self.shown_images = np.append(self.shown_images, chosen_image_indices)
         print "Added to shown list"
-        self.iteration += 1
+        #self.iteration += 1
         print("Checking before returning :: " + str(type(chosen_image_indices)))
         images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
         self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
+        record.append(images_to_show)
+        record.append(time_end - time_start)
+        self.csv_file.writerow(record)
         return images_to_show
 
 
