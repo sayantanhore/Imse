@@ -84,3 +84,4 @@ class LoadInitialImages(object):
             del images_in_shortest_cluster
         print("Images fetched")
         return images_to_show, clusters_to_datapoints
+

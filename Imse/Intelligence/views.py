@@ -357,8 +357,7 @@ def do_search(request, state = 'nostart'):
             e.iterations += 1
         e.save()
 
-        print "Hello ..." + str(ims)
-    global p
+        print "Hello ..." + str(type(ims))
     #p.send_signal(SIGTERM)
     return HttpResponse(str(ims.tolist()))
 
