@@ -44,6 +44,8 @@ class GP(object):
                 self.datapoints_predict = datapoints_predict
 
             elif not accepted_image is None:
+                self.K = self.K + numpy.diag((sigma_n**2) * numpy.random.normal(1,0.1,(len(self.datapoints_shown))))
+                self.K_xx_clusters = self.K_xx_clusters + numpy.diag((sigma_n**2) * numpy.random.normal(1, 0.1, (len(datapoints_predict))))
                 K = (kernel[accepted_image, :])[:, self.datapoints_shown]
                 self.K = numpy.vstack((self.K, K))
                 K = numpy.append(K, 0.25 + (sigma_n**2) * numpy.random.normal(1, 0.1, 1))[numpy.newaxis, :].T

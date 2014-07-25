@@ -68,20 +68,23 @@ class LoadInitialImages(object):
 
         distances_from_centroids = spatial.distance.cdist(centroids, hist_rgb, "cityblock")
         print("distances picked")
-        shortest_cluster = np.argmin(distances_from_centroids)
+        shortest_cluster_index = np.argmin(distances_from_centroids)
         print("Shortest cluster selected")
-        images_in_shortest_cluster = clusters_to_datapoints[shortest_cluster]
+        shortest_cluster = clusters_to_datapoints[shortest_cluster_index]
         #images_in_shortest_cluster = copy.deepcopy(clusters_to_datapoints[shortest_cluster])
-        np.random.shuffle(images_in_shortest_cluster)
         images_to_show = []
 
         for i in range(no_of_images):
-            images_to_show.append(images_in_shortest_cluster[i])
-            images_in_shortest_cluster = np.delete(images_in_shortest_cluster, i)
-            np.random.shuffle(images_in_shortest_cluster)
+            np.random.shuffle(shortest_cluster)
+            images_to_show.append(shortest_cluster[i])
+            shortest_cluster = np.delete(shortest_cluster, i)
+            if len(shortest_cluster) == 0:
+                del shortest_cluster
+                shortest_cluster_index = np.argmin(distances_from_centroids)
+                shortest_cluster = clusters_to_datapoints[shortest_cluster_index]
         print("Images extracted")
-        if len(images_in_shortest_cluster) == 0:
-            del images_in_shortest_cluster
+        if len(shortest_cluster) == 0:
+            del shortest_cluster
         print("Images fetched")
         return images_to_show, clusters_to_datapoints
 

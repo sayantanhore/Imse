@@ -26,7 +26,7 @@ class GPSOM(object):
         self.previouse_images = []
         self.last_shown_images = None
         self.feedback = []
-        self.exploration_rate = 0.002
+        self.exploration_rate = 0.2
         self.iteration = 0
         self.sub_iteration = 0
         self.gp = GP.GP(self.images_number, copy.deepcopy(self.images_shown), self.data, self.exploration_rate)
@@ -131,6 +131,7 @@ class GPSOM(object):
                     feedback.append(self.pseudo_feedback)
                     images_to_return.append(self.Predict_n(feedback, True))
                 img_counter -= 1
+            print "No of images returned :: " + str(img_counter)
             time_end = time.time()
             self.bulk_predicted = True
             self.iteration += 1
@@ -173,9 +174,7 @@ class GPSOM(object):
         datapoints_predict = self.clusters[self.chosen_model_vector]
         ucb, mean = self.gp.GP(self.feedback + feedback, datapoints_predict, "images", self.iteration)
 
-        print "Ha ah a ah ah ah ah"
         self.index_chosen_image = ucb.argmax()
-        print "Ha ah a ah ah ah ah"
         self.chosen_image = datapoints_predict[self.index_chosen_image]
         print "chosen image " + str(self.chosen_image)
         self.pseudo_feedback = float("{0:.2f}".format(mean[self.index_chosen_image]))
