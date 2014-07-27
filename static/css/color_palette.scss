@@ -1,0 +1,62 @@
+// Heading text color
+
+$header-text-color: #848484;
+
+.page-header{
+    margin-top: 0px;
+    h2{
+        color: $header-text-color;
+    }
+}
+
+.table{
+    tr{
+        height: 2em;
+        //padding: 2em;
+        td{
+            padding-right: 2em;
+        }
+    }
+    
+}
+
+.row{
+    margin: 1em;
+    border: 1px solid;
+    padding: 0px;
+    padding-left: 3em;
+    >.col-md-1{
+        //border: 1px solid;
+        padding: 0em;
+        width: auto;    
+        
+        >.col-md-1{
+            //border: 1px solid;
+            padding-left: 0em;
+            padding-right: .5em;
+            
+        }
+        
+    }
+    >.col-md-5{
+        //border: 1px solid;
+        padding-left: 0em;
+        padding-right: 0em;
+        >.col-md-1{
+            padding-left: 0em;
+            padding-right: .5em;
+            
+        }
+    }
+    div{
+        
+        div{
+            
+            .thumbnail{
+                background-color: #0066CC;
+                width: 2em;
+                height: 2em;
+            }
+        }
+    }
+}
