@@ -1,3 +1,11 @@
+// Mixins
+
+@mixin border-radius($border-radius) {
+    -webkit-border-radius: $border-radius !important;
+    -moz-border-radius: $border-radius !important;
+    border-radius: $border-radius !important;
+}
+
 // Heading text color
 
 $header-text-color: #848484;
@@ -20,42 +28,64 @@ $header-text-color: #848484;
     
 }
 
+.btn-sm{
+    margin-top: 0em;
+    @include border-radius(0px);
+}
+/*
+.page-header:last-of-type{
+    margin-bottom: 2em;
+    padding-top: 1em;
+    //padding-bottom: 0em;
+}
+*/
+
+
+
 .row{
-    margin: 1em;
-    border: 1px solid;
-    padding: 0px;
+    margin-top: 0em;
+    margin-left: 4em;
+    margin-bottom: 0.5em;
+    width: 100%;
+    //border: 1px solid;
+    padding-top: 0px;
     padding-left: 3em;
+    padding-bottom: 0em;
     >.col-md-1{
         //border: 1px solid;
-        padding: 0em;
-        width: auto;    
-        
+        padding-left: 0em;
+        padding-right: 0em;
+        padding-bottom: 0em;
+        width: 0em;
+        height: 2em;
         >.col-md-1{
             //border: 1px solid;
-            padding-left: 0em;
-            padding-right: .5em;
-            
+            padding-left: 0.5em;
+            padding-right: 0.5em;
+            padding-bottom: 0em;
+            height: 0em;
         }
-        
     }
     >.col-md-5{
         //border: 1px solid;
         padding-left: 0em;
         padding-right: 0em;
+        padding-bottom: 0em;
+        height: 2em;
         >.col-md-1{
-            padding-left: 0em;
-            padding-right: .5em;
-            
+            padding-left: 0.5em;
+            padding-right: 0.5em;
+            padding-bottom: 0em;
+            height: 0em;
         }
     }
     div{
-        
-        div{
-            
+        div{    
             .thumbnail{
-                background-color: #0066CC;
+                
                 width: 2em;
                 height: 2em;
+                @include border-radius(0px);
             }
         }
     }
