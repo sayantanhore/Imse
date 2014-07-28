@@ -126,7 +126,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     np.random.seed(random_seed)
 
     # Write inputs to files
-    outfileprefix = str(len(feedback) - 10) + '_'
+    outfileprefix = 'output/' + str(len(feedback) - 12) + '_'
     outfile_feedback = outfileprefix + 'feedback.npy'
     outfile_feedback_indices = outfileprefix + 'feedback_indices.npy'
     outfile_randomseed = outfileprefix + 'random_seed.npy'
