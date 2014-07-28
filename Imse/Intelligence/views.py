@@ -17,12 +17,18 @@ from Intelligence.path.Path import *
 from Intelligence.Util import LoadInitialImages
 from subprocess import Popen
 from signal import SIGTERM
+import socket
 
 
 
 # Refer to path/Path.py for current working dataset
+if socket.gethostname() == 'iitti':
+    base_path = '/home/lassetyr/programming/Imse/Imse/'
+else:
+    base_path = '/ldata/IMSE/Imse/Imse/'
 
-p = Popen(["python", "/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/gp_cuda.py"])
+
+p = Popen(["python", base_path + "Intelligence/GPSOM/gp_cuda.py"])
 
 data_color = numpy.load(DATA_PATH + 'kernel-cl-'+str(IMAGENUM)+'.npy')
 data = data_color

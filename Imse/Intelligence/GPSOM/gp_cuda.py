@@ -15,13 +15,18 @@ import scipy.spatial.distance as dist
 import pycuda.gpuarray as gpuarray
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
+import socket
 
 
-DATA_PATH = "/ldata/IMSE/data/Data/"
+if socket.gethostname() == 'iitti':
+    DATA_PATH = '/home/lassetyr/programming/Imse/data/Data/'
+    base_path = '/home/lassetyr/programming/Imse/Imse/'
+else:
+    DATA_PATH = "/ldata/IMSE/data/Data/"
+    base_path = '/ldata/IMSE/Imse/Imse/'
 
 def gp_caller(feedback, feedback_indices):
     print "In test....."
-    data = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
     print("Allocation done 28")
     mean, var = gaussian_process(data, feedback, feedback_indices, debug=False)
     print("Allocation done 2999999999")
@@ -96,7 +101,7 @@ def round_up_to_blocksize(num, block_size, int_type):
     return int_type(num)
 
 def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, int_type=np.int32,
-                     kernel_file='/ldata/IMSE/Imse/Imse/Intelligence/GPSOM/kernels.c', debug=False):
+                     kernel_file= base_path + 'Intelligence/GPSOM/kernels.c', debug=False):
     print("Inside GP")
     if debug:
         print("Initialized starts")
@@ -117,6 +122,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     print(feedback_indices[0])
     print(len(feedback_indices))
     print(type(feedback_indices))
+    random_seed = 1
+    np.random.seed(random_seed)
     float_type = float_type
     int_type = int_type
     block_size = (16, 16, 4)
@@ -295,6 +302,20 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print(test_mean[:10])
     print("Allocation done 27")
     print(mean)
+
+    # Writing input and results to files for testing
+    outfileprefix = str(len(feedback) - 10) + '_'
+    outfile_feedback = outfileprefix + 'feedback.npy'
+    outfile_feedback_indices = outfileprefix + 'feedback_indices.npy'
+    outfile_randomseed = outfileprefix + 'random_seed.npy'
+    outfile_mean = outfileprefix + 'mean.npy'
+    outfile_variance = outfileprefix + 'variance.npy'
+    np.save(outfile_feedback, feedback)
+    np.save(outfile_feedback_indices, feedback_indices)
+    np.save(outfile_randomseed, random_seed)
+    np.save(outfile_mean, mean)
+    np.save(outfile_variance, variance)
+
     return mean, variance
 
 
@@ -370,6 +391,7 @@ if __name__ == "__main__":
 
     #print(np.shape(mean))
     #print(np.shape(ucb))
+    data = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
 
     server = SimpleXMLRPCServer(("localhost", 8888))
     server.register_function(gp_caller, "gp")
