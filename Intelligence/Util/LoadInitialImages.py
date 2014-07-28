@@ -83,8 +83,6 @@ class LoadInitialImages(object):
                 shortest_cluster_index = np.argmin(distances_from_centroids)
                 shortest_cluster = clusters_to_datapoints[shortest_cluster_index]
         print("Images extracted")
-        if len(shortest_cluster) == 0:
-            del shortest_cluster
         print("Images fetched")
         return images_to_show, clusters_to_datapoints
 

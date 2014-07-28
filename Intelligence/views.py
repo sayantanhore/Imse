@@ -15,11 +15,17 @@ from Intelligence.Exploitation import Exploitation
 from Intelligence.Random import Random
 from Intelligence.path.Path import *
 from Intelligence.Util import LoadInitialImages
+from subprocess import Popen
+from signal import SIGTERM
 
-# File to write results into
+
+
 results_file = None
+# Refer to path/Path.py for current working dataset
 
-data_color = numpy.load(DATA_PATH + 'kernel-cl-'+str(IMAGENUM)+'.npy')
+#p = Popen(["python", FILE_ROOT_PATH + "Intelligence/GPSOM/gp_cuda.py"])
+
+data_color = numpy.load(DATA_PATH + 'cl_distances'+str(IMAGENUM)+'.npy')
 data = data_color
 #data_texture = numpy.load(DATA_PATH + 'kernel-ht-'+str(IMAGENUM)+'.npy')
 #data_shape = numpy.load(DATA_PATH + 'kernel-eh-'+str(IMAGENUM)+'.npy')
@@ -62,10 +68,8 @@ def start_search(request):
     # For django local
     html = t.render(Context({'image' : '/media/' + target_img.filename}))
     # For django local
-    # Open file for writing results
     global results_file
     results_file = open("/ldata/IMSE/Imse_cpu/Imse/Intelligence/results.csv", "a+")
-
     return HttpResponse(html)
 
 
@@ -115,6 +119,7 @@ def target_search(request):
                 target=target_img,
                 iterations = 0,
                 excellents = 0,
+
                 goods = 0,
                 satisfactories = 0,
                 images_number_total = IMAGENUM,
@@ -205,20 +210,18 @@ def category_search(request):
 # FirstRound
 
 def firstround_search(request):
-
+    print "Firstround..."
     #t = get_template('Intelligence/search.html')
     colors = request.GET['colors']
     print "Colors :: " + colors
     print request.session.session_key
     no_of_images = request.GET['no_of_images']
-    print "1"
     no_of_images = int(no_of_images.encode("utf-8"))
-    print "2"
     initial_image_selector = LoadInitialImages.LoadInitialImages(colors)
-    print "3"
+    print "Helooooo"
     global clusters
     images_to_show, clusters = initial_image_selector.load_images(no_of_images)
-    print "4"
+    print "Images selected"
     global firstround_images_shown
     firstround_images_shown = images_to_show
     print "In view :: " + str(images_to_show)
@@ -232,7 +235,6 @@ def firstround_search2(request):
 # Do Search
 
 def do_search(request, state = 'nostart'):
-
     start_search = time.time()
     objs = Image.objects.all()[:IMAGENUM]
     try :
@@ -260,7 +262,7 @@ def do_search(request, state = 'nostart'):
 
         if e.algorithm =='GP-SOM':
             global predictor
-            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, data, clusters, e.category, results_file)
+            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, e.category, data, results_file)
             '''
             if e.algorithm == 'GP-UCB':
                 predictor = ucbGP.GPUCB(DATA_PATH, e.images_number_iteration, e.images_number_total, e.category)
@@ -332,13 +334,14 @@ def do_search(request, state = 'nostart'):
             ims = predictor.Predict(feedback, True, num_predictions)
         elif accepted == "false":
             ims = predictor.Predict(feedback, False, num_predictions)
-
+        print("Checking ims type :: " + str(ims.shape))
 
     if finished == "true":
         e.finished = True
         e.timefinish = time.time()
         e.save()
-
+        #global p
+        #p.send_signal(SIGTERM)
         t = get_template('Intelligence/finished.html')
         html = t.render(Context({
                         'iterations': e.iterations
@@ -356,11 +359,13 @@ def do_search(request, state = 'nostart'):
         '''distance = 1-(numpy.load(filename_distance))
         distances = distance[e.target.index,:]
         d = distances[ims]'''
-        e.iterations += 1
+        if num_predictions != 1:
+            e.iterations += 1
         e.save()
 
         print "Hello ..." + str(type(ims))
-    return HttpResponse(str(ims))
+    #p.send_signal(SIGTERM)
+    return HttpResponse(str(ims.tolist()))
 
 
 
