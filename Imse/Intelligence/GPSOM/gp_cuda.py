@@ -124,6 +124,16 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     print(type(feedback_indices))
     random_seed = 1
     np.random.seed(random_seed)
+
+    # Write inputs to files
+    outfileprefix = str(len(feedback) - 10) + '_'
+    outfile_feedback = outfileprefix + 'feedback.npy'
+    outfile_feedback_indices = outfileprefix + 'feedback_indices.npy'
+    outfile_randomseed = outfileprefix + 'random_seed.npy'
+    np.save(outfile_feedback, feedback)
+    np.save(outfile_feedback_indices, feedback_indices)
+    np.save(outfile_randomseed, random_seed)
+
     float_type = float_type
     int_type = int_type
     block_size = (16, 16, 4)
@@ -303,16 +313,10 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     print("Allocation done 27")
     print(mean)
 
-    # Writing input and results to files for testing
-    outfileprefix = str(len(feedback) - 10) + '_'
-    outfile_feedback = outfileprefix + 'feedback.npy'
-    outfile_feedback_indices = outfileprefix + 'feedback_indices.npy'
-    outfile_randomseed = outfileprefix + 'random_seed.npy'
+    # Write results to files for testing
+
     outfile_mean = outfileprefix + 'mean.npy'
     outfile_variance = outfileprefix + 'variance.npy'
-    np.save(outfile_feedback, feedback)
-    np.save(outfile_feedback_indices, feedback_indices)
-    np.save(outfile_randomseed, random_seed)
     np.save(outfile_mean, mean)
     np.save(outfile_variance, variance)
 
@@ -387,16 +391,18 @@ if __name__ == "__main__":
     #feat = np.asfarray(np.load("../../../../data/Data/cl25000.npy"), dtype="float32")
     #feat = None
     #feedback = np.array(np.random.random(33))
-    #mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"), debug=True)
 
     #print(np.shape(mean))
     #print(np.shape(ucb))
     data = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
+#    feedback = [0 for i in range(10)]
+#    mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"), debug=True)
+
 
     server = SimpleXMLRPCServer(("localhost", 8888))
     server.register_function(gp_caller, "gp")
     #server.register_function(gaussian_process, "gp")
-    print "Listening at 8888"
+    print("Listening at 8888")
     server.serve_forever()
 
 
