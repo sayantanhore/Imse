@@ -52,6 +52,7 @@ class GPSOM(object):
         #self.feedback = feedback
         if accepted == True:
             self.shown_images = np.append(self.shown_images, np.array([self.last_selected_image]))
+            self.remaining_image_list = np.setdiff1d(self.remaining_image_list, np.array([self.last_selected_image]))
         print "Before cuda initialization"
         '''
         if not self.gp:
@@ -100,35 +101,27 @@ class GPSOM(object):
         if num_predictions == 1:
             print "1 image"
             chosen_image_indices = np.array([ucb.argmax()])
-            print "Chosen Image Incex :: " + str(type(chosen_image_indices))
-            self.last_selected_image = chosen_image_indices[0]
+            self.last_selected_image = self.remaining_image_list[chosen_image_indices[0]]
+            print "Checking last selected image type :: "
+            print type(self.last_selected_image)
             self.sub_iteration += 1
         else:
             print "Greater than 1"
             print(ucb)
-            #ucb.sort()
-            print("UCB Sorted")
-            print ucb.shape
-            print "Just before slicing"
-            print num_predictions
             #chosen_image_indices = ucb[0,:][-num_predictions:]
             chosen_image_indices = ucb[0,:].argsort()[-num_predictions:][::-1]
             print chosen_image_indices
-            print "Chosen Image Incex :: " + str(type(chosen_image_indices))
-            self.shown_images = np.append(self.shown_images, chosen_image_indices)
+            #self.shown_images = np.append(self.shown_images, chosen_image_indices)
             # Update the feedback
             self.feedback = self.feedback + feedback
             self.sub_iteration = 0
             self.iteration += 1
-        print "Image picked up"
-        print(type(self.shown_images))
-        #self.shown_images = self.shown_images + chosen_image_indices
         #self.shown_images = np.append(self.shown_images, chosen_image_indices)
-        print "Added to shown list"
-        #self.iteration += 1
         print("Checking before returning :: " + str(type(chosen_image_indices)))
         images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
-        self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
+        if num_predictions > 1:
+            self.shown_images = np.append(self.shown_images, images_to_show)
+            self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
         record.append(images_to_show)
         record.append(time_end - time_start)
         self.csv_file.writerow(record)
