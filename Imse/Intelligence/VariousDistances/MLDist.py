@@ -129,13 +129,14 @@ class MLDist(object):
 
         return self.chosen_image
 
-    def GetRelDistances(self): #got code from Lasse
+    def GetRelDistances(self): #got code from Lasse. fixed. UNTESTED
         #Feature significance calculation
         chosen_images = np.array([self.image_features[i] for i in self.index_chosen_image])
         weights = np.expand_dims(self.feedback, axis=1)
-        weighted_mean = np.mean(np.multiply(weights, chosen_images), axis=0)
-        weighted_variance = np.sum(np.square(np.subtract(chosen_images, weighted_mean)), axis=0)
+        weighted_mean = np.sum(np.multiply(weights, chosen_images),axis=0)/np.sum(weights)#np.mean(np.multiply(weights, chosen_images), axis=0)
+        weighted_variance = np.sum(np.square(np.multiply(weights, np.subtract(chosen_images, weighted_mean))), axis=0)
         significance = np.subtract(1, np.divide(weighted_variance, self.variance))
+        significance[significance < 0.0] = 0.0 #this normalizes situations where chosen variance would had been greter than overall variance (which is possible)
 
         # Distance calculation
         signif_chosen_images = np.multiply(significance, chosen_images)
