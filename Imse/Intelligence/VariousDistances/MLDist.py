@@ -21,6 +21,13 @@ class MLDist(object):
         self.distance_matrix = distancematrix
         #self.clusters = pickle.load(open(DATA_PATH+'clusters-to-datapoints-cl-' + str(images_number_total)))
         self.clusters = clusters
+        ''''
+        #DO ONCE SAVE VARIANCES:
+        varvec = np.genfromtxt('variances.txt', dtype = 'float', delimiter=" ")
+        variances = np.c_[varvec]
+        np.save('variances.npy', variances)
+        '''
+        self.variance = np.load('variances.npy')
         self.clusters_names = range(self.images_number, self.images_number + self.clusters_number)
         self.images_shown = firstround_images_shown
         self.image_features
