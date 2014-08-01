@@ -18,7 +18,8 @@ $header-text-color: #848484;
 $shadow-colour: #086A87;
 
 body{
-    background-color: #01A9DB;
+    //background-color: #01A9DB;
+    background-color: #084B8A;
 }
 
 .page-header{
@@ -30,17 +31,19 @@ body{
 
 .color-palette{
     margin-top: 1em;
+    margin-bottom: 1em;
     padding-top: 0.5em;
     padding-left: 2em;
     padding-right: 2em;
     padding-bottom: 0.5em;
     background-color: #FFFFFF;
-    @include container-shadow($shadow-colour)
+    @include container-shadow($shadow-colour);
+    @include border-radius(2px);
 }
 
 .btn-sm{
     margin-top: 0em;
-    @include border-radius(0px);
+    @include border-radius(2px);
 }
 
 .color-box{
