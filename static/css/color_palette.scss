@@ -6,29 +6,36 @@
     border-radius: $border-radius !important;
 }
 
+@mixin container-shadow($shadow-colour) {
+    -webkit-box-shadow: 0 10px 6px -6px $shadow-colour;
+    -moz-box-shadow: 0 10px 6px -6px $shadow-colour;
+        box-shadow: 0 10px 6px -6px $shadow-colour;
+}
+
 // Heading text color
 
 $header-text-color: #848484;
+$shadow-colour: #086A87;
+
+body{
+    background-color: #01A9DB;
+}
 
 .page-header{
+    margin-top: 0px;
     h2{
         color: $header-text-color;
     }
 }
 
-.page-header:last-of-type{
-    margin-top: 0px;
-}
-
-.table{
-    tr{
-        height: 2em;
-        //padding: 2em;
-        td{
-            padding-right: 2em;
-        }
-    }
-    
+.color-palette{
+    margin-top: 1em;
+    padding-top: 0.5em;
+    padding-left: 2em;
+    padding-right: 2em;
+    padding-bottom: 0.5em;
+    background-color: #FFFFFF;
+    @include container-shadow($shadow-colour)
 }
 
 .btn-sm{
@@ -36,7 +43,7 @@ $header-text-color: #848484;
     @include border-radius(0px);
 }
 
-.color-container{
+.color-box{
     display: flex;
     flex-wrap: wrap;
     justify-content: space-around;
@@ -53,51 +60,3 @@ $header-text-color: #848484;
     }
 }
 
-.row_2{
-    margin-top: 0em;
-    margin-left: 4em;
-    margin-bottom: 0.5em;
-    width: 100%;
-    //border: 1px solid;
-    padding-top: 0px;
-    padding-left: 3em;
-    padding-bottom: 0em;
-    >.col-md-1{
-        //border: 1px solid;
-        padding-left: 0em;
-        padding-right: 0em;
-        padding-bottom: 0em;
-        width: 0em;
-        height: 2em;
-        >.col-md-1{
-            //border: 1px solid;
-            padding-left: 0.5em;
-            padding-right: 0.5em;
-            padding-bottom: 0em;
-            height: 0em;
-        }
-    }
-    >.col-md-5{
-        //border: 1px solid;
-        padding-left: 0em;
-        padding-right: 0em;
-        padding-bottom: 0em;
-        height: 2em;
-        >.col-md-1{
-            padding-left: 0.5em;
-            padding-right: 0.5em;
-            padding-bottom: 0em;
-            height: 0em;
-        }
-    }
-    div{
-        div{    
-            .thumbnail{
-                //background-color: #0066CC;
-                width: 2em;
-                height: 2em;
-                @include border-radius(3px);
-            }
-        }
-    }
-}
