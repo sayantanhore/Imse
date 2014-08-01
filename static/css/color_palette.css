@@ -1,66 +1,42 @@
-.page-header h2 {
-  color: #848484; }
+body {
+  background-color: #084B8A; }
 
-.page-header:last-of-type {
+.page-header {
   margin-top: 0px; }
+  .page-header h2 {
+    color: #848484; }
 
-.table tr {
-  height: 2em; }
-  .table tr td {
-    padding-right: 2em; }
+.color-palette {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding-top: 0.5em;
+  padding-left: 2em;
+  padding-right: 2em;
+  padding-bottom: 0.5em;
+  background-color: #FFFFFF;
+  -webkit-box-shadow: 0 10px 6px -6px #086a87;
+  -moz-box-shadow: 0 10px 6px -6px #086a87;
+  box-shadow: 0 10px 6px -6px #086a87;
+  -webkit-border-radius: 2px !important;
+  -moz-border-radius: 2px !important;
+  border-radius: 2px !important; }
 
 .btn-sm {
   margin-top: 0em;
-  -webkit-border-radius: 0px !important;
-  -moz-border-radius: 0px !important;
-  border-radius: 0px !important; }
+  -webkit-border-radius: 2px !important;
+  -moz-border-radius: 2px !important;
+  border-radius: 2px !important; }
 
-.color-container {
+.color-box {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-around;
   align-items: stretch; }
-  .color-container > .thumbnail {
+  .color-box > .thumbnail {
     margin-right: 0.6em;
     margin-left: 0.6em;
     margin-bottom: 0.7em;
     flex-grow: 1;
-    width: 2em;
-    height: 2em;
-    -webkit-border-radius: 3px !important;
-    -moz-border-radius: 3px !important;
-    border-radius: 3px !important; }
-
-.row_2 {
-  margin-top: 0em;
-  margin-left: 4em;
-  margin-bottom: 0.5em;
-  width: 100%;
-  padding-top: 0px;
-  padding-left: 3em;
-  padding-bottom: 0em; }
-  .row_2 > .col-md-1 {
-    padding-left: 0em;
-    padding-right: 0em;
-    padding-bottom: 0em;
-    width: 0em;
-    height: 2em; }
-    .row_2 > .col-md-1 > .col-md-1 {
-      padding-left: 0.5em;
-      padding-right: 0.5em;
-      padding-bottom: 0em;
-      height: 0em; }
-  .row_2 > .col-md-5 {
-    padding-left: 0em;
-    padding-right: 0em;
-    padding-bottom: 0em;
-    height: 2em; }
-    .row_2 > .col-md-5 > .col-md-1 {
-      padding-left: 0.5em;
-      padding-right: 0.5em;
-      padding-bottom: 0em;
-      height: 0em; }
-  .row_2 div div .thumbnail {
     width: 2em;
     height: 2em;
     -webkit-border-radius: 3px !important;
