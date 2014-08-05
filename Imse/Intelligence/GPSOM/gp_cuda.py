@@ -154,8 +154,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     # Inialize variables
     # Pad everything to match block size
     # Add zero row to the beginning of feature matrix for zero padding in cuda operations TODO: is this necessary?
-    data = np.asfarray(np.vstack((data, [np.zeros(n_features)])), dtype=float_type)
     n_total = np.size(data, 0)
+    data = np.asfarray(np.vstack((data, [np.zeros(n_features)])), dtype=float_type)
     n_total_padded = round_up_to_blocksize(n_total, block_size, int_type)  # Pad to match block size
     n_feedback = np.size(feedback_indices, 0)
     n_feedback_padded = round_up_to_blocksize(n_feedback, block_size, int_type)  # Pad to match block size
@@ -178,7 +178,10 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     K_noise = pad_vector(K_noise, n_feedback, n_feedback_padded, dtype=float_type)
     K_inv = np.asfarray(K, dtype=float_type)
     diag_K_xx = None
+    print "No of feedbacks :: " + str(n_feedback)
+    print "No of predicts :: " + str(n_predict)
     if not K_xx_noise:
+        print "Generating K_xx noise"
         diag_K_xx = np.random.normal(1, 0.1, n_predict)
     else:
         diag_K_xx = K_xx_noise
@@ -288,7 +291,14 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         K_xKK_x_T_test = np.diag(np.matrix(K_xK) * np.matrix(K_x).T)
         check_result("K_xKK_x_T", diag_K_xKK_x_T, K_xKK_x_T_test)
 
+    print "diag_K_xx shape"
+    print diag_K_xx.shape
+    print diag_K_xx
+    print "diag_K_xKK_x_T shape"
+    print diag_K_xKK_x_T
+    print diag_K_xx[1] - diag_K_xKK_x_T[0][1]
     calc_variance(cuda_module, block_size, n_predict_padded, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, variance_gpu)
+    drv.memcpy_dtoh(variance, variance_gpu)
     print("Allocation done 25")
     if debug:
         drv.memcpy_dtoh(variance, variance_gpu)
