@@ -411,14 +411,12 @@ if __name__ == "__main__":
         print('sys.argv length:', len(sys.argv))
         if sys.argv[1] == 'debug':
             print('sys.argv[1] == debug')
-            #for i in range(20):
-            i = 0
-            feedback = np.load(str(i) + '_feedback.npy')
-            feedback_indices = np.load(str(i) + '_feedback_indices.npy')
-            K_diag_noise = np.load(str(i) + '_random_K.npy')
-            K_xx_noise = np.load(str(i) + '_random_K_xx.npy')
-            mean, variance = gaussian_process(data, feedback, feedback_indices, debug=True)
-            sys.exit(0)
+            for i in range(20):
+                feedback = np.load(str(i) + '_feedback.npy')
+                feedback_indices = np.load(str(i) + '_feedback_indices.npy')
+                K_diag_noise = np.load(str(i) + '_random_K.npy')
+                K_xx_noise = np.load(str(i) + '_random_K_xx.npy')
+                mean, variance = gaussian_process(data, feedback, feedback_indices, debug=True)
 
     #print(np.shape(mean))
     #print(np.shape(ucb))
