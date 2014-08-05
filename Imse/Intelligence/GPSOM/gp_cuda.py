@@ -254,11 +254,11 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     drv.memcpy_dtoh(K_x, K_x_gpu)
     if debug:
         K_x_test = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
-#        for i, idx1 in enumerate(predict_indices):
-#            for j, idx2 in enumerate(feedback_indices):
-#                vdist = distance(data[idx1], data[idx2]) / len(data[0])
-#                K_x_test[i][j] = vdist
-#        check_result('K_x', K_x[:n_predict, :n_feedback], K_x_test[:n_predict, :n_feedback])
+        for i, idx1 in enumerate(predict_indices):
+            for j, idx2 in enumerate(feedback_indices):
+                vdist = distance(data[idx1], data[idx2]) / len(data[0])
+                K_x_test[i][j] = vdist
+        check_result('K_x', K_x[:n_predict, :n_feedback], K_x_test[:n_predict, :n_feedback])
 
     linalg.init()
     K_inv_gpuarr = gpuarray.to_gpu(K_inv.astype(float_type))
@@ -411,12 +411,14 @@ if __name__ == "__main__":
         print('sys.argv length:', len(sys.argv))
         if sys.argv[1] == 'debug':
             print('sys.argv[1] == debug')
-            for i in range(20):
-                feedback = np.load(str(i) + '_feedback.npy')
-                feedback_indices = np.load(str(i) + '_feedback_indices.npy')
-                K_diag_noise = np.load(str(i) + '_random_K.npy')
-                K_xx_noise = np.load(str(i) + '_random_K_xx.npy')
-                mean, variance = gaussian_process(data, feedback, feedback_indices)
+            #for i in range(20):
+            i = 0
+            feedback = np.load(str(i) + '_feedback.npy')
+            feedback_indices = np.load(str(i) + '_feedback_indices.npy')
+            K_diag_noise = np.load(str(i) + '_random_K.npy')
+            K_xx_noise = np.load(str(i) + '_random_K_xx.npy')
+            mean, variance = gaussian_process(data, feedback, feedback_indices, debug=True)
+            sys.exit(0)
 
     #print(np.shape(mean))
     #print(np.shape(ucb))
