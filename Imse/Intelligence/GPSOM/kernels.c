@@ -6,10 +6,16 @@ __global__ void generate__K__(float *K_gpu, int *shown_gpu, float *feat_gpu, flo
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (z > feature_size || y > shown_size || x > shown_size) return;
+    if (z >= 1 || y >= shown_size || x >= shown_size) return;
 
-    atomicAdd(&K_gpu[y * shown_size + x], fdividef(fabs(feat_gpu[shown_gpu[x] * feature_size + z] -
-        feat_gpu[shown_gpu[y] * feature_size + z]), feature_size));
+    //atomicAdd(&K_gpu[y * shown_size + x], fdividef(fabs(feat_gpu[shown_gpu[x] * feature_size + z] -
+        //feat_gpu[shown_gpu[y] * feature_size + z]), feature_size));
+    //K_gpu[y * shown_size + x] += fabs(feat_gpu[shown_gpu[x] * feature_size + z] - feat_gpu[shown_gpu[y] * feature_size + z]);
+    //K_gpu[y * shown_size + x] += y;
+    for (int i = 0; i < feature_size; i++)
+    {
+	atomicAdd(&K_gpu[y * shown_size + x], fdividef(fabs(feat_gpu[shown_gpu[x] * feature_size + i] - feat_gpu[shown_gpu[y] * feature_size + i]),feature_size));
+    }
 
     if(x == y) {
         K_gpu[y * shown_size +  x] = K_noise_gpu[x];
@@ -24,11 +30,15 @@ __global__ void generate__K_x__(float *K_x_gpu, int *shown_gpu, int *predict_gpu
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (z > feature_size || y > prediction_size || x > shown_size) return;
-
-    atomicAdd(&K_x_gpu[y * shown_size + x], fdividef(fabsf(feat_gpu[shown_gpu[x] * feature_size + z] -
-        feat_gpu[predict_gpu[y] * feature_size + z]), feature_size));
+    if (z >= 1 || y >= prediction_size || x >= shown_size) return;
+    for (int i = 0; i < feature_size; i++)
+    {
+    atomicAdd(&K_x_gpu[y * shown_size + x], fdividef(fabsf(feat_gpu[shown_gpu[x] * feature_size + i] -
+        feat_gpu[predict_gpu[y] * feature_size + i]), feature_size));
+    }
+    //K_x_gpu[y * shown_size + x] = feat_gpu[predict_gpu[y] * feature_size + 2];
 }
+
 
 __global__ void generate__diag_K_xx__(float *diag_K_xx_gpu, float *K_xx_noise_gpu)
 {

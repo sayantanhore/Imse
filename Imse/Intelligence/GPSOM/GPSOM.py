@@ -92,6 +92,7 @@ class GPSOM(object):
         print mean.shape
         print mean
         print "3"
+        print var.shape
         #mean, var = proxy.gaussian_process(self.image_features, self.feedback, self.shown_images)
         #var, mean = gp.gaussian_process(self.image_features, self.feedback, self.shown_images, debug=True)
         print "After calling gaussian process"
