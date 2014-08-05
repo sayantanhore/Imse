@@ -280,6 +280,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print(K_xK.shape)
 
     calc_K_xKK_x_T(cuda_module, block_size, n_feedback_padded, n_predict_padded, K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu)
+    drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
+    np.save(outfileprefix + "diag.npy", diag_K_xKK_x_T)
     print("Allocation done 24")
     if debug:
         drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
