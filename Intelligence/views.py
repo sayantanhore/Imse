@@ -222,6 +222,8 @@ def firstround_search(request):
     global clusters
     images_to_show, clusters = initial_image_selector.load_images(no_of_images)
     print "Images selected"
+    images_to_show = numpy.load("/ldata/IMSE/Imse/Imse/output/0_feedback_indices.npy")
+    images_to_show = images_to_show.tolist()
     global firstround_images_shown
     firstround_images_shown = images_to_show
     print "In view :: " + str(images_to_show)

@@ -24,7 +24,7 @@ class GPSOM(object):
         self.shown_images = np.array(firstround_images_shown)
         self.feedback_indices = []
         self.feedback = []
-        self.exploration_rate = 0.2
+        self.exploration_rate = 0
         self.iteration = 0  # TODO: use this to change the exploration/exploitation ratio
         self.sub_iteration = 0
         self.gp = GP.GP()
@@ -54,6 +54,7 @@ class GPSOM(object):
         #self.feedback = feedback
         if accepted == True:
             self.shown_images = np.append(self.shown_images, np.array([self.last_selected_image]))
+            self.remaining_image_list = np.setdiff1d(self.remaining_image_list, np.array([self.last_selected_image]))
         print "Before cuda initialization"
         '''
         if not self.gp:
@@ -67,8 +68,10 @@ class GPSOM(object):
         # Copy all the values that will be used as they have to be modified only within iteration
         # Current training set with images and feedback and clusters assignments
         print "Before calling gaussian process"
+        random_K = np.load("/ldata/IMSE/test_data/gpu_test_1/output/" + str(self.sub_iteration)  + "_random_K.npy")
+        random_K_xx = np.load("/ldata/IMSE/test_data/gpu_test_1/output/" + str(self.sub_iteration)  + "_random_K_xx.npy")
         time_start = time.time()
-        mean, var = self.gp.GP(self.shown_images, self.feedback + feedback, self.remaining_image_list, self.data)
+        mean, var = self.gp.GP(self.shown_images, self.feedback + feedback, self.remaining_image_list, self.data, random_K, random_K_xx)
         time_end = time.time()
         print "Mean and Var returned"
         '''
@@ -105,12 +108,14 @@ class GPSOM(object):
         print "UCB computed"
         print("Hello hello")
         print "Num Predictions" + str(type(num_predictions))
+        images_to_show = None
         if num_predictions == 1:
             print "1 image"
             chosen_image_indices = np.array([ucb.argmax()])
             print "Chosen Image Incex :: " + str(type(chosen_image_indices))
-            self.last_selected_image = chosen_image_indices[0]
+            self.last_selected_image = self.remaining_image_list[chosen_image_indices[0]]
             self.sub_iteration += 1
+            images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
         else:
             print "Greater than 1"
             print(ucb)
@@ -123,11 +128,14 @@ class GPSOM(object):
             chosen_image_indices = ucb.argsort()[-num_predictions:][::-1]
             print chosen_image_indices
             print "Chosen Image Incex :: " + str(type(chosen_image_indices))
-            self.shown_images = np.append(self.shown_images, chosen_image_indices)
+            #self.shown_images = np.append(self.shown_images, chosen_image_indices)
             # Update the feedback
             self.feedback = self.feedback + feedback
             self.sub_iteration = 0
             self.iteration += 1
+            images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
+            self.shown_images = np.append(self.shown_images, images_to_show)
+            self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
         print "Image picked up"
         print(type(self.shown_images))
         #self.shown_images = self.shown_images + chosen_image_indices
@@ -135,9 +143,9 @@ class GPSOM(object):
         print "Added to shown list"
         #self.iteration += 1
         print("Checking before returning :: " + str(type(chosen_image_indices)))
-        images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
+        #images_to_show = self.remaining_image_list[chosen_image_indices.tolist()]
         print "Compute remaining image list"
-        self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
+        #self.remaining_image_list = np.setdiff1d(self.remaining_image_list, images_to_show)
         print "Update record for shown images"
         record.append(images_to_show)
         print "Update record for calculation time"
