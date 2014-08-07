@@ -18,7 +18,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 import socket
 import sys
 
-
+IMAGENUM = 25000
 if socket.gethostname() == 'iitti':
     DATA_PATH = '/home/lassetyr/programming/Imse/data/Data/'
     base_path = '/home/lassetyr/programming/Imse/Imse/'
@@ -26,11 +26,11 @@ else:
     DATA_PATH = "/ldata/IMSE/data/Data/"
     base_path = '/ldata/IMSE/Imse/Imse/'
 
-def gp_caller(data, feedback, feedback_indices):
+def gp_caller(feedback, feedback_indices):
     print "In test....."
     print("Allocation done 28")
     mean, var = gaussian_process(data, feedback, feedback_indices, debug=False)
-    print("Allocation done 2999999999")
+    print("Allocation done 2999999999")    #print("Mean : " + str(mean))
     #print("Mean : " + str(mean))
     #return "This is test for " + str(feedback)
     print(mean.dtype)
@@ -162,7 +162,7 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     n_predict = int_type(n_total - n_feedback)
     n_predict_padded = round_up_to_blocksize(n_predict, block_size, int_type)
     feedback_indices = np.asarray(feedback_indices, dtype=int_type)
-    predict_indices = np.setdiff1d(np.array([i for i in range(25000)]), feedback_indices)
+    predict_indices = np.setdiff1d(np.array([i for i in range(IMAGENUM)]), feedback_indices)
     feedback_indices = pad_vector(feedback_indices, n_feedback, n_feedback_padded, dtype=int_type)
     #predict_indices = np.arange(0, n_predict, dtype=int_type)  # TODO: wut?
     predict_indices = pad_vector(predict_indices, n_predict, n_predict_padded, dtype=int_type)
@@ -423,6 +423,7 @@ if __name__ == "__main__":
     #feat = None
     #feedback = np.array(np.random.random(33))
     data = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
+    '''
     if len(sys.argv) > 1:
         print('sys.argv length:', len(sys.argv))
         if sys.argv[1] == 'debug':
@@ -439,7 +440,7 @@ if __name__ == "__main__":
 #    feedback = [0 for i in range(10)]
 #    mean, ucb = gaussian_process(feat, feedback, np.arange(len(feedback), dtype="int32"), debug=True)
 
-
+    '''
     server = SimpleXMLRPCServer(("localhost", 8888))
     server.register_function(gp_caller, "gp")
     #server.register_function(gaussian_process, "gp")

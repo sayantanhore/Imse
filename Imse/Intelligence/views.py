@@ -334,7 +334,7 @@ def do_search(request, state = 'nostart'):
             ims = predictor.Predict(feedback, True, num_predictions)
         elif accepted == "false":
             ims = predictor.Predict(feedback, False, num_predictions)
-        print("Checking ims type :: " + str(ims.shape))
+        print("Checking ims type :: " + str(ims))
 
     if finished == "true":
         e.finished = True
