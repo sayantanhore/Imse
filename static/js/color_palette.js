@@ -38,6 +38,8 @@ $(document).ready(function(){
     console.log(colours[0])
     $(".thumbnail").each(function(index){
         $(this).css("background-color", colours[index]);
+        var sqWidth = $(this).width();
+        $(this).height(sqWidth);
     });
 });
 
