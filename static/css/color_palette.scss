@@ -54,14 +54,31 @@ body{
     justify-content: space-around;
     align-items: stretch;
     align-content: stretch;
-    >.thumbnail{
+    .thumbnail{
         margin-right: 0.6em;
         margin-left: 0.6em;
         margin-bottom: 0.7em;
         flex-grow: 1;
+        text-align: center;
         width: 2em;
-        height: 2em;
+        //height: 2em;
         @include border-radius(3px);
+        &:hover{
+            @include border-radius(100%);
+        }
+        span{
+            //border: 1px solid;
+            display: none;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            //font-size: 2em;
+            //font-weight: bold;
+            //line-height: 18px;
+            color: #000000;
+            text-shadow: 0 1px 0 #ffffff;
+            opacity: 0.2;
+            filter: alpha(opacity=20);
+            text-decoration: none;
+        }
     }
 }
 

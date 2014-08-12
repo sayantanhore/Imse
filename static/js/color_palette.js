@@ -17,13 +17,19 @@ function colorRow(){
     var row = $("<div class = 'row'>");
     var col = $("<div class='col-xs-12 col-md-12 color-box'></div>");
     for (var colourCounter = 0; colourCounter < 25; colourCounter ++){
-        col.append(createColorHyperlink().addClass("thumbnail"));
+        col.append(createColorHyperlink().addClass("thumbnail").append("<span>&nbsp;</span>"));
     }
     row.append(col);
     return row;
 }
 
-
+function changeBackgroundOpacity(element, alpha){
+    console.log("Opacity changed to " + alpha)
+    var bgcolour = element.css("backgroundColor");
+    console.log(bgcolour);
+    var newBGColour = bgcolour.replace('rgb','rgba').replace(')', ','+alpha+')'); 
+    element.css("background-color", newBGColour);
+}
 
 $(document).ready(function(){
     
@@ -40,6 +46,35 @@ $(document).ready(function(){
         $(this).css("background-color", colours[index]);
         var sqWidth = $(this).width();
         $(this).height(sqWidth);
+        $(this).find("span").css("display", "inline-block").css("vertical-align", "middle");
+    })
+    .mouseover(function(){
+        
+        changeBackgroundOpacity($(this), 0.3);
+        
+        $(this).find("span").html("X");
+        $(this).find("span").css("opacity", "1");
+        
+        var txtHeight = $(this).find("span").height();
+        var selfHeight = $(this).height();
+        
+        //console.log("Self height :: " + selfHeight)
+        //console.log("Txt height :: " + txtHeight)
+        
+        if(txtHeight < selfHeight){
+            var changeRatio = selfHeight / txtHeight;
+            $(this).find("span").css("font-size", parseInt(changeRatio) + "em");
+            $(this).find("span").css("margin", parseInt(changeRatio) + "px 0");
+        }
+    })
+    .mouseout(function(){
+        
+        changeBackgroundOpacity($(this), 1.0);
+        $(this).find("span").css("font-size", "1em");
+        $(this).css("opacity", "1").find("span").html("");
     });
+    
+    
+    
 });
 
