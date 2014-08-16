@@ -260,6 +260,9 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
                 K_x_test[i][j] = vdist
         check_result('K_x', K_x[:n_predict, :n_feedback], K_x_test[:n_predict, :n_feedback])
 
+    np.save(outfileprefix + 'K_x.npy', K_x)
+    np.save(outfileprefix + 'K_inv.npy', K_inv)
+
     linalg.init()
     print('K_x[0]')
     print(K_x[0])
@@ -269,6 +272,8 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     K_x_gpuarr = gpuarray.to_gpu(K_x.astype(float_type))
     K_xK_gpu = linalg.dot(K_x_gpuarr, K_inv_gpuarr)
     K_xK = K_xK_gpu.get()
+    np.save(outfileprefix + 'K_xK.npy', K_xK)
+
     print("Allocation done 23")
 
     #calc_K_xK()
@@ -280,17 +285,17 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
 
     calc_K_xKK_x_T(cuda_module, block_size, n_feedback_padded, n_predict_padded, K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu)
     print("Allocation done 24")
+    drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
+    np.save(outfileprefix + 'diag_K_xKK_x_T', diag_K_xKK_x_T)
     if debug:
-        drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
         K_xKK_x_T_test = np.diag(np.matrix(K_xK) * np.matrix(K_x).T)
         check_result("K_xKK_x_T", diag_K_xKK_x_T, K_xKK_x_T_test)
 
     calc_variance(cuda_module, block_size, n_predict_padded, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, variance_gpu)
     print("Allocation done 25")
+    drv.memcpy_dtoh(variance, variance_gpu)
     if debug:
-        drv.memcpy_dtoh(variance, variance_gpu)
-        variance_test = np.sqrt(
-            np.abs(np.subtract(diag_K_xx[:n_predict], diag_K_xKK_x_T[:, :n_predict])))
+        variance_test = np.abs(np.subtract(diag_K_xx[:n_predict], diag_K_xKK_x_T[:, :n_predict]))
         check_result('Variance', variance[:, :n_predict], variance_test[:, :n_predict])
 
     print('K_xK.shape:' ,np.shape(K_xK))
@@ -334,11 +339,12 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print(mean.flatten()[:10])
         print(test_mean[:10])
     print("Allocation done 27")
-    print(mean)
 
     # Write results to files for testing
     mean = mean.flatten()[:n_predict]
     variance = variance.flatten()[:n_predict]
+    print(mean)
+    print(variance)
     outfile_mean = outfileprefix + 'mean.npy'
     outfile_variance = outfileprefix + 'variance.npy'
     print('Writing to files ' + outfile_mean + ' and ' + outfile_variance)
