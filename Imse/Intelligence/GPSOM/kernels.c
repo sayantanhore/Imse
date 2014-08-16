@@ -50,7 +50,7 @@ __global__ void generate__variance__(float *variance_gpu, float *diag_K_xx_gpu, 
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     if (x > length) return;
-    variance_gpu[x] = sqrtf(fabsf(diag_K_xx_gpu[x] - diag_K_xKK_x_T_gpu[x]));
+    variance_gpu[x] = fabsf(diag_K_xx_gpu[x] - diag_K_xKK_x_T_gpu[x]);
 }
 
 __global__ void generate__UCB__(float *ucb_gpu, float *mean_gpu, float *variance_gpu)
