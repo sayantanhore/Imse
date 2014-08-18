@@ -17,13 +17,19 @@ from Intelligence.path.Path import *
 from Intelligence.Util import LoadInitialImages
 from subprocess import Popen
 from signal import SIGTERM
+import socket
 
 
 
 results_file = None
 # Refer to path/Path.py for current working dataset
+if socket.gethostname() == 'iitti':
+    base_path = '/home/lassetyr/programming/Imse/Imse/'
+else:
+    base_path = '/ldata/IMSE/Imse/Imse/'
 
-p = Popen(["python", FILE_ROOT_PATH + "Intelligence/GPSOM/gp_cuda.py"])
+
+p = Popen(["python", base_path + "Intelligence/GPSOM/gp_cuda.py"])
 
 data_color = numpy.load(DATA_PATH + 'kernel-cl-'+str(IMAGENUM)+'.npy')
 data = data_color
@@ -68,8 +74,6 @@ def start_search(request):
     # For django local
     html = t.render(Context({'image' : '/media/' + target_img.filename}))
     # For django local
-    global results_file
-    results_file = open("/ldata/IMSE/Imse/Imse/Intelligence/results.csv", "a+")
     return HttpResponse(html)
 
 
@@ -262,7 +266,7 @@ def do_search(request, state = 'nostart'):
 
         if e.algorithm =='GP-SOM':
             global predictor
-            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, e.category, results_file)
+            predictor = GPSOM.GPSOM(e.images_number_iteration, e.images_number_total, firstround_images_shown, e.category)
             '''
             if e.algorithm == 'GP-UCB':
                 predictor = ucbGP.GPUCB(DATA_PATH, e.images_number_iteration, e.images_number_total, e.category)
