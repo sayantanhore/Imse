@@ -2,6 +2,7 @@ data/
 *.pyc
 *.py~
 *.db
+*.npy
 
 *.swp
 *.html~
