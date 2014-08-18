@@ -14,7 +14,7 @@ class GPSOM(object):
     '''Program parameters'''
     #IMAGES_NUMBER = 1000
 
-    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, category, file):
+    def __init__(self, images_number_iteration, images_number_total, firstround_images_shown, category):
         print "Inside GPSOM"
         self.image_features = np.asfarray(np.load(DATA_PATH + "cl25000.npy"), dtype="float32")
         self.first_sample_size = images_number_iteration
@@ -28,7 +28,6 @@ class GPSOM(object):
         self.gp = None
         self.last_selected_image = None
         self.remaining_image_list = np.setdiff1d(np.array([i for i in range(images_number_total)]), self.shown_images)
-        self.csv_file = csv.writer(file, delimiter = ",")
 
     def FirstRound(self):
         """Pre-processing stage - sample first set of images
@@ -133,7 +132,6 @@ class GPSOM(object):
         #images_to_show = chosen_image_indices.tolist()
         record.append(images_to_show)
         record.append(time_end - time_start)
-        self.csv_file.writerow(record)
         return images_to_show
 
 
