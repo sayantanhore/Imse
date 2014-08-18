@@ -12,10 +12,12 @@ if socket.gethostname() == 'iitti':
     DATA_PATH = '/home/lassetyr/programming/Imse/data/Data/'
     base_path = '/home/lassetyr/programming/Imse/Imse/'
     MEDIA_PATH = '/home/lassetyr/programming/Imse/data/media/'
+    FILE_ROOT_PATH = '/home/lassetyr/programming/Imse/Imse/'
 else:
     DATA_PATH = "/ldata/IMSE/data/Data/"
     base_path = '/ldata/IMSE/Imse/Imse/'
     MEDIA_PATH = '/ldata/IMSE/data/media/'
+    FILE_ROOT_PATH = '/ldata/IMSE/Imse/Imse/'
 # Loading 10000 dataset
 #IMAGENUM = 10000
 #DATA_PATH = '/ldata/IMSE/data/Data10000/'
@@ -28,4 +30,4 @@ else:
 
 # For accessing modules from Django dev server
 
-FILE_ROOT_PATH = '/ldata/IMSE/Imse/Imse/'
+
