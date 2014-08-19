@@ -1,0 +1,41 @@
+*{
+    padding: 0em;
+    margin: 0em;
+}
+body{
+    padding: 1em;
+}
+
+.slider-container{
+    text-align: center;
+    padding: 1em;
+    border: 0px solid;
+}
+
+.disp{
+    margin: 0em auto;
+    font-family: "Verdana", Geneva, sans-serif;
+    color: #6E6E6E;
+    width: 4em;
+    height: 1.5em;
+    border: 1px solid #BDBDBD; 
+}
+.axel{
+    margin: 0.5em auto;
+    width: 20%;
+    height: .2em;
+    border: 0px solid;
+    background-color: #6E6E6E;
+    position: relative;
+}
+
+.roller{
+    opacity: 1.0;
+    position: absolute;
+    width: 1em;
+    height: 1em;
+    background-color: #0080FF;
+    -webkit-border-radius: 100% !important;
+    -moz-border-radius: 100% !important;
+    border-radius: 100% !important;
+}

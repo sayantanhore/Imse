@@ -2,166 +2,102 @@
 <html>
     <head>
         <link rel="stylesheet" type="text/css" href="static/css/bootstrap.css">
-        <link rel="stylesheet" type="text/css" href="static/css/color_palette.css">
+        <link rel="stylesheet" type="text/css" href="static/css/slider.css">
         <script type="text/javascript" src="static/js/jquery-1.11.1.js"></script>
         <script type="text/javascript" src="static/js/bootstrap.js"></script>
-        <script type="text/javascript" src="static/js/color_palette.js"></script>
+        <script type="text/javascript" src="static/js/slider.js"></script>
         <title>Title of the document</title>
+        
+        <script>
+            //var sliders = [];
+            $(document).ready(function(){
+                var slider1 = new Slider();
+                
+                $("body").append(slider1.createSlider());
+                slider1.initSlider();
+                
+                
+                
+                $(document).on("mouseup", function(event){
+                    if (sliderPressed === true){
+                        //$(activeSlider.roller).trigger("mouseup");
+                        activeSlider.releaseSlider();
+                    }
+                });
+                
+                $(document).on("mousemove", function(event){
+                    if (sliderPressed === true){
+                        activeSlider.dragSlider();
+                    }
+                });
+            });
+            
+            /*
+            var mouseDown = false;
+            var xOffset = 0.0;
+            var rollerRadius = 0.0;
+
+            $(document).ready(function(){
+                var slider = $("<div></div>");
+                slider.addClass("slider-container");
+                $("body").append(slider);
+
+                var display = $("<div></div>");
+                display.addClass("disp");
+                slider.append(display);
+
+                var axel = $("<div></div>");
+                axel.addClass("axel");
+                slider.append(axel);
+
+                var roller = $("<div></div>");
+                roller.addClass("roller");
+                axel.append(roller);
+
+
+
+                var rollerTopPosition = parseFloat(($(".roller").height() - $(".axel").height()) / 2);
+
+                rollerRadius = parseFloat(roller.width() / 2);
+
+                roller.css("top", -rollerTopPosition);
+                roller.css("left", -rollerRadius);
+                display.html("0.00");
+
+                roller.mousedown(function(event){
+                    xOffset = event.pageX - $(this).css("left").replace("px", "");
+                    mouseDown = true;
+                    $(this).css("opacity", "0.6");
+                    console.log("down");
+                });
+
+                $(document.body).mouseup(function(event){
+                    if (mouseDown === true){
+                        mouseDown = false;
+                        roller.css("opacity", "1.0");
+                        console.log("up");
+                    }
+                });
+
+                $(document).on("mousemove", function(event){
+                    if (mouseDown === true){
+                        moveToX = event.pageX - xOffset;
+
+                        if ((moveToX + rollerRadius) >= 0 && (moveToX + rollerRadius) <= (axel.width())){
+                            roller.css("left", moveToX);
+                            $(".disp").html(parseFloat((moveToX + rollerRadius) / axel.width()).toFixed(2));
+                        }
+                    }
+
+                });
+
+            });
+            */
+        </script>
     </head>
 
     <body>
-        <div class="container-fluid">
-            <div class="page-header">
-                <h2>Welcome Sayantan, <small>please select a few colours and proceed</small><button type='button' class='btn btn-default btn-sm pull-right'>Proceed</button></h2>
-                
-            </div>
-            <div></div>
-            <!--
-            <div class = "row">
-                    <div class="col-xs-1 col-md-1">
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="">
-                              
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="col-xs-5 col-md-5">
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-xs-1 col-md-1">
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-xs-5 col-md-5">
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                        <div class="col-xs-1 col-md-1">
-                            <a href="#" class="thumbnail">
-                              
-                            </a>
-                        </div>
-                    </div>
-                    
-            </div>
-            -->
-            
-        </div>
+        
     </body>
 
 </html>
