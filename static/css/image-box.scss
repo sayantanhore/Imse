@@ -1,0 +1,74 @@
+// ImageBox component
+
+// Author Sayantan Hore
+// Created on 19.08.2014
+
+// --------------------------------
+
+
+// Reset Everything
+
+*{
+    margin: 0em;
+    padding: 0em;
+}
+
+// Declaring variables
+
+$body-background-color: #084B8A;
+$shadow-colour: #0B3861;
+$btn-close-colour: #BDBDBD;
+
+// Mixins
+
+@mixin border-radius($border-radius) {
+    -webkit-border-radius: $border-radius !important;
+    -moz-border-radius: $border-radius !important;
+    border-radius: $border-radius !important;
+}
+
+@mixin container-shadow($shadow-colour) {
+    -webkit-box-shadow: 0 10px 6px -6px $shadow-colour;
+    -moz-box-shadow: 0 10px 6px -6px $shadow-colour;
+        box-shadow: 0 10px 6px -6px $shadow-colour;
+}
+
+// Padding body
+
+body{
+    padding: 1em;
+    background-color: $body-background-color;
+}
+.outer-image-container{
+    border: 0px solid;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-items: stretch;
+    align-content: stretch;
+    .thumbnail{
+        padding: 0em;
+        margin-right: 1em;
+        margin-bottom: 1em;
+        //width: 12em;
+        //height: 12em;
+        @include container-shadow($shadow-colour);
+        @include border-radius(0px);
+        border: 0px solid;
+        text-align: center;
+        //opacity: 0.3;
+        //background-color: #0066CC;
+        .btn-close{
+            float: right;
+            padding: 0.2em;
+            line-height: 0.5em;
+            font-size: 1.2em;
+            font-family: verdana;
+            color: $btn-close-colour;
+            border: 0px solid; 
+        }
+        
+    }
+}
+
+
