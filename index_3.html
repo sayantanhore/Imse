@@ -24,18 +24,20 @@
                     var imageBox = imageBoxObj.createImageBox();
                     imageBoxObj.outerContainer.append(imageBox);
                     var imPath = '../images/im' + (i + 1) + '.jpg';
-                    imageBoxObj.loadImage(imPath, imageBox);  
+                    imageBoxObj.loadImage(imPath, imageBox);
+                    imageBoxObj.sliderArray[imageBoxObj.sliderArray.length - 1].initSlider();
                 }
                 
                 $("body").on("mousedown", "img", function(event){
-                    $(this).parent().addClass("border-glow");
+                    $(this).closest(".wrapper").addClass("border-glow");
+                    $(this).closest(".wrapper").css("z-index", 2);
                     imageDragged = {};
-                    imageDragged.image = $(this);
-                    imageDragged.xOffset = event.pageX - imageDragged.image.parent().offset().left;
-                    imageDragged.yOffset = event.pageY - imageDragged.image.parent().offset().top;
+                    imageDragged.image = $(this).closest(".wrapper");
+                    imageDragged.xOffset = event.pageX - imageDragged.image.offset().left;
+                    imageDragged.yOffset = event.pageY - imageDragged.image.offset().top;
                     
                     //console.log($(imgArray[0]).find("img").prop("src"));
-                    $(".thumbnail").each(function(index, value){
+                    $(".wrapper").each(function(index, value){
                         imgArray.push(value);
                         //console.log($(value).find("img").attr("src"));
                     });
@@ -43,17 +45,22 @@
                 });
                 
                 $("body").on("mouseup", function(event){
+                    if (sliderPressed === true){
+                        //$(activeSlider.roller).trigger("mouseup");
+                        activeSlider.releaseSlider();
+                    }
                     if(imageDragged){
-                        imageDragged.image.parent().removeClass("border-glow");
-                        newX = imageDragged.image.parent().offset().left;
-                        newY = imageDragged.image.parent().offset().top;
+                        imageDragged.image.removeClass("border-glow");
                         
-                        var indexOfImageDragged = imgArray.indexOf(imageDragged.image.parent()[0]);
+                        newX = imageDragged.image.offset().left;
+                        newY = imageDragged.image.offset().top;
+                        
+                        var indexOfImageDragged = imgArray.indexOf(imageDragged.image[0]);
                         
                         console.log(indexOfImageDragged);
                         //console.log($(imgArray[6]).find("img").attr("src"));
-                        $(".thumbnail").each(function(index, value){
-                            if (value === imageDragged.image.parent()[0]){
+                        $(".wrapper").each(function(index, value){
+                            if (value === imageDragged.image[0]){
                                 console.log(true);
                                 draggedForward = true;
                                 imgArray.splice(indexOfImageDragged, 1);
@@ -61,14 +68,14 @@
                             compareX = $(value).offset().left + $(value).width();
                             compareY = $(value).offset().top + $(value).height();
                             
-                            if (newX <= compareX && newY <= compareY && value !== imageDragged.image.parent()[0]){
+                            if (newX <= compareX && newY <= compareY && value !== imageDragged.image[0]){
                                 console.log("changed at " + index);
                                 if (draggedForward == false){
-                                    imgArray.splice(index, 0, imageDragged.image.parent());
+                                    imgArray.splice(index, 0, imageDragged.image);
                                     imgArray.splice(indexOfImageDragged + 1, 1);
                                 }
                                 else{
-                                    imgArray.splice(index - 1, 0, imageDragged.image.parent());
+                                    imgArray.splice(index - 1, 0, imageDragged.image);
                                     draggedForward = false;
                                 }
                                 
@@ -79,7 +86,7 @@
                         
                         });
                         //console.log($(imgArray[6]).find("img").attr("src"));
-                        
+                        imageDragged.image.css("z-index", "auto");
                         imageDragged = null;
                         console.log(imgArray.length)
                         
@@ -93,7 +100,7 @@
                             //imageBoxObj.outerContainer.append($(value));
                             
                             var imageBox = imageBoxObj.createImageBox();
-                            imageBox.append($(value).children());
+                            imageBox.append($(value).children().clone(true));
                             imageBoxObj.outerContainer.append(imageBox);
                             
                             //var imPath = $(value).find("img").attr("src");
@@ -107,13 +114,18 @@
                         //imageBoxObj.outerContainer.removeClass("outer-image-container").addClass("outer-image-container");
                         
                         imgArray = [];
+                        //$(this).find(".btn-close").hide();
+                        //$(this).find(".slider-wrapper").hide();
                     }
                 });
                 
                 $("body").on("mousemove", function(event){
+                    if (sliderPressed === true){
+                        activeSlider.dragSlider();
+                    }
                     if(imageDragged){
                         
-                        imageDragged.image.parent().offset({
+                        imageDragged.image.closest(".wrapper").offset({
                             left: event.pageX - imageDragged.xOffset,
                             top: event.pageY - imageDragged.yOffset
                             
@@ -122,10 +134,20 @@
                     }
                     return false;
                 });
+                /*
+                $(".wrapper").mouseenter(function(){
+                    $(this).find(".btn-close").show();
+                    $(this).find(".slider-wrapper").show();
+                });
                 
-                console.log(screen.availHeight);
-                console.log($(window).height());
-                console.log($(".outer-image-container").height());
+                $(".wrapper").mouseleave(function(){
+                    $(this).find(".btn-close").hide();
+                    $(this).find(".slider-wrapper").hide();
+                });
+                */
+                //console.log(screen.availHeight);
+                //console.log($(window).height());
+                //console.log($(".outer-image-container").height());
             });
             
         </script>

@@ -17,6 +17,7 @@
 
 $body-background-color: #084B8A;
 $shadow-colour: #0B3861;
+$glow-colour: #FFF;
 $btn-close-colour: #BDBDBD;
 
 // Mixins
@@ -30,15 +31,33 @@ $btn-close-colour: #BDBDBD;
 @mixin container-shadow($shadow-colour) {
     -webkit-box-shadow: 0 10px 6px -6px $shadow-colour;
     -moz-box-shadow: 0 10px 6px -6px $shadow-colour;
-        box-shadow: 0 10px 6px -6px $shadow-colour;
+    box-shadow: 0 10px 6px -6px $shadow-colour;
+}
+
+@mixin draggable-glow-border($glow-colour){
+    -webkit-box-shadow:0 0 20px $glow-colour !important; 
+    -moz-box-shadow: 0 0 20px $glow-colour !important; 
+    box-shadow:0 0 20px $glow-colour !important;
 }
 
 // Padding body
 
 body{
+    border: 0px solid;
     padding: 1em;
     background-color: $body-background-color;
 }
+
+.border-glow{
+    @include draggable-glow-border($glow-colour);
+}
+
+
+
+img{
+    //position: absolute;
+}
+
 .outer-image-container{
     border: 0px solid;
     display: flex;
@@ -46,29 +65,49 @@ body{
     justify-content: space-around;
     align-items: stretch;
     align-content: stretch;
-    .thumbnail{
+    .wrapper{
         padding: 0em;
         margin-right: 1em;
         margin-bottom: 1em;
-        //width: 12em;
-        //height: 12em;
-        @include container-shadow($shadow-colour);
-        @include border-radius(0px);
-        border: 0px solid;
-        text-align: center;
-        //opacity: 0.3;
-        //background-color: #0066CC;
-        .btn-close{
-            float: right;
-            padding: 0.2em;
-            line-height: 0.5em;
-            font-size: 1.2em;
-            font-family: verdana;
-            color: $btn-close-colour;
-            border: 0px solid; 
+            
+        .thumbnail{
+            padding: 0em;
+            margin-right: 0em;
+            margin-bottom: 0em;
+            //width: 12em;
+            //height: 12em;
+            @include container-shadow($shadow-colour);
+            @include border-radius(0px);
+            border: 0px solid;
+            text-align: center;
+            //opacity: 0.3;
+            //background-color: #0066CC;
+            position: relative;
+            .btn-close{
+                background-color: #0066CC;
+                position: absolute;
+                //top: 0em;
+                //position: absolute;
+                padding: 0.2em;
+                line-height: 0.5em;
+                font-size: 1.2em;
+                font-family: verdana;
+                color: $btn-close-colour;
+                border: 0px solid; 
+            }
+            .slider-wrapper{
+                width: 100%;
+                //top: 5em;
+                position: absolute;
+                border: 0px solid;
+                .slider-container{
+                    background: rgba(255, 255, 255, 0.8);
+                }
+            }
+
         }
-        
     }
+    
 }
 
 
