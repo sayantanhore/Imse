@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="static/css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="static/css/slider.css">
+        <link rel="stylesheet" type="text/css" href="static/css/image-box.css">
+        <script type="text/javascript" src="static/js/jquery-1.11.1.js"></script>
+        <script type="text/javascript" src="static/js/bootstrap.js"></script>
+        <script type="text/javascript" src="static/js/slider.js"></script>
+        <script type="text/javascript" src="static/js/image-box.js"></script>
+        
+        <script>
+            var rowHeight;
+            var imageDragged = null;
+            var draggedForward = false;
+            var imgArray = [];
+            
+            $(document).ready(function(){
+                rowHeight = parseFloat(($(window).height() * 90 / 100) / 5);
+                //console.log(rowHeight);
+                var imageBoxObj = new ImageBox();
+                imageBoxObj.createOuterContainer();
+                for (var i = 0; i < 29; i++){
+                    var imageBox = imageBoxObj.createImageBox();
+                    imageBoxObj.outerContainer.append(imageBox);
+                    var imPath = '../images/im' + (i + 1) + '.jpg';
+                    imageBoxObj.loadImage(imPath, imageBox);  
+                }
+                
+                $("body").on("mousedown", "img", function(event){
+                    $(this).parent().addClass("border-glow");
+                    imageDragged = {};
+                    imageDragged.image = $(this);
+                    imageDragged.xOffset = event.pageX - imageDragged.image.parent().offset().left;
+                    imageDragged.yOffset = event.pageY - imageDragged.image.parent().offset().top;
+                    
+                    //console.log($(imgArray[0]).find("img").prop("src"));
+                    $(".thumbnail").each(function(index, value){
+                        imgArray.push(value);
+                        //console.log($(value).find("img").attr("src"));
+                    });
+                    console.log(imgArray.length);
+                });
+                
+                $("body").on("mouseup", function(event){
+                    if(imageDragged){
+                        imageDragged.image.parent().removeClass("border-glow");
+                        newX = imageDragged.image.parent().offset().left;
+                        newY = imageDragged.image.parent().offset().top;
+                        
+                        var indexOfImageDragged = imgArray.indexOf(imageDragged.image.parent()[0]);
+                        
+                        console.log(indexOfImageDragged);
+                        //console.log($(imgArray[6]).find("img").attr("src"));
+                        $(".thumbnail").each(function(index, value){
+                            if (value === imageDragged.image.parent()[0]){
+                                console.log(true);
+                                draggedForward = true;
+                                imgArray.splice(indexOfImageDragged, 1);
+                            }
+                            compareX = $(value).offset().left + $(value).width();
+                            compareY = $(value).offset().top + $(value).height();
+                            
+                            if (newX <= compareX && newY <= compareY && value !== imageDragged.image.parent()[0]){
+                                console.log("changed at " + index);
+                                if (draggedForward == false){
+                                    imgArray.splice(index, 0, imageDragged.image.parent());
+                                    imgArray.splice(indexOfImageDragged + 1, 1);
+                                }
+                                else{
+                                    imgArray.splice(index - 1, 0, imageDragged.image.parent());
+                                    draggedForward = false;
+                                }
+                                
+                                return false;
+                            }
+                            
+                            
+                        
+                        });
+                        //console.log($(imgArray[6]).find("img").attr("src"));
+                        
+                        imageDragged = null;
+                        console.log(imgArray.length)
+                        
+                        imageBoxObj.outerContainer = null;
+                        $(".outer-image-container").remove();
+                        imageBoxObj.createOuterContainer();
+                        
+                        $.each(imgArray, function(index, value){
+                            //$(value).removeClass("thumbnail").addClass("thumbnail");
+                            //$(value).css("width", "auto").css("height", "auto");
+                            //imageBoxObj.outerContainer.append($(value));
+                            
+                            var imageBox = imageBoxObj.createImageBox();
+                            imageBox.append($(value).children());
+                            imageBoxObj.outerContainer.append(imageBox);
+                            
+                            //var imPath = $(value).find("img").attr("src");
+                            //imageBoxObj.loadImage(imPath, imageBox);
+                            
+                            //console.log($(value).find("img").attr("src"));
+                            console.log("123")
+                            
+                        });
+                        
+                        //imageBoxObj.outerContainer.removeClass("outer-image-container").addClass("outer-image-container");
+                        
+                        imgArray = [];
+                    }
+                });
+                
+                $("body").on("mousemove", function(event){
+                    if(imageDragged){
+                        
+                        imageDragged.image.parent().offset({
+                            left: event.pageX - imageDragged.xOffset,
+                            top: event.pageY - imageDragged.yOffset
+                            
+                        });
+                        
+                    }
+                    return false;
+                });
+                
+                console.log(screen.availHeight);
+                console.log($(window).height());
+                console.log($(".outer-image-container").height());
+            });
+            
+        </script>
+    </head>
+
+    <body>
+        
+    </body>
+
+</html>

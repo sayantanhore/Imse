@@ -21,8 +21,6 @@ ImageBox.prototype.createImageBox = function(){
     }
     var imageBox = $("<div></div>");
     imageBox.addClass("thumbnail");
-    
-    //imageBox.css("width", parseFloat(this.outerContainer.width() / 4 - 5)).css("height", parseFloat(this.outerContainer.width() / 4 - 5));
     var closeButton = $("<div>x</div>");
     closeButton.addClass("btn-close");
     
