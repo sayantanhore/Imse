@@ -17,6 +17,8 @@ import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 import socket
 import sys
+import time
+import cProfile
 
 
 if socket.gethostname() == 'iitti':
@@ -104,7 +106,7 @@ def round_up_to_blocksize(num, block_size, int_type):
 def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, int_type=np.int32,
                      kernel_file=base_path + 'Intelligence/GPSOM/kernels.c', debug=False, K_noise=None,
                      K_xx_noise=None):
-    print("Inside GP")
+    #t = time.time()
     if debug:
         print("Initialized starts")
         print("Loading test data")
@@ -116,40 +118,16 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
 #            feedback_indices = np.loadtxt(infile)
         np.set_printoptions(linewidth=500)
     import pycuda.autoinit
-    print(feedback)
-    print(type(feedback_indices))
-    #feedback_indices = feedback_indices.tolist()
-    print(feedback_indices)
-    print(data.shape)
-    print(feedback_indices[0])
-    print(len(feedback_indices))
-    print(type(feedback_indices))
-    random_seed = 1
-    np.random.seed(random_seed)
-
-    # Write inputs to files
-    outfileprefix = 'output/' + str(len(feedback) - 12) + '_'
-    outfile_feedback = outfileprefix + 'feedback.npy'
-    outfile_feedback_indices = outfileprefix + 'feedback_indices.npy'
-    outfile_randomKxx = outfileprefix + 'random_K_xx.npy'
-    outfile_randomK = outfileprefix + 'random_K.npy'
-    np.save(outfile_feedback, feedback)
-    np.save(outfile_feedback_indices, feedback_indices)
-
 
     float_type = float_type
     int_type = int_type
-    block_size = (16, 16, 4)
+    block_size = (8, 8, 16)
     n_features = np.int32(np.size(data, 1))  # TODO: Assuming the n_features is divisible by block_size[2]
-    print("Start from here")
-    #print(kernel_file
     cuda_module = open(kernel_file, 'r').read()
-    print("len cuda_module" + str(len(cuda_module)))
     try:
         cuda_module = SourceModule(cuda_module)
     except Exception as e:
         print(e)
-    print("Check zero")
 
     # Inialize variables
     # Pad everything to match block size
@@ -171,7 +149,6 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print('Generating K_noise')
         K_noise = np.random.normal(1, 0.1, n_feedback)  # Generate diagonal noise
     # Save K diagonal noise
-    np.save(outfile_randomK, K_noise)
 
     K_noise = pad_vector(K_noise, n_feedback, n_feedback_padded, dtype=float_type)
     K_inv = np.asfarray(K, dtype=float_type)
@@ -181,7 +158,6 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     else:
         diag_K_xx = K_xx_noise
     # Save K_xx random noise
-    np.save(outfile_randomKxx, diag_K_xx)
 
     diag_K_xx = pad_vector(diag_K_xx, n_predict, n_predict_padded, dtype=float_type)
     diag_K_xKK_x_T = np.zeros((1, n_predict_padded), dtype=float_type)
@@ -189,24 +165,16 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     feedback = np.array(feedback)
     feedback = pad_vector(feedback, n_feedback, n_feedback_padded, dtype=float_type)
     mean = np.zeros((1, n_predict_padded), dtype=float_type)
-    ucb = np.zeros((1, n_predict_padded), dtype=float_type)
-    print("Check one")
 
     # Allocate GPU memory and copy data, check datatype before each allocation
     # TODO: add dimension checking
     check_type(data, float_type)
-    print(data.shape)
     data_gpu = drv.mem_alloc(data.nbytes)
     drv.memcpy_htod(data_gpu, data)
-    print("Allocation done")
     check_type(feedback_indices, int_type)
-    print("Allocation done 2")
     feedback_indices_gpu = drv.mem_alloc(feedback_indices.nbytes)
-    print("Allocation done 3")
     drv.memcpy_htod(feedback_indices_gpu, feedback_indices)
-    print("Allocation done 4")
     check_type(K, float_type)
-    print("Allocation done 5")
     K_gpu = drv.mem_alloc(K.nbytes)
     drv.memcpy_htod(K_gpu, K)
     check_type(K_inv, float_type)
@@ -235,12 +203,11 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
     drv.memcpy_htod(feedback_gpu, feedback)
     check_type(mean, float_type)
     mean_gpu = drv.mem_alloc(mean.nbytes)
-    print("Allocation done 20")
 
+    # Initialization done
+    # Actual GP calculations begin here
     calc_K(cuda_module, block_size, n_features, n_feedback_padded, data_gpu, feedback_indices_gpu, K_noise_gpu, K_gpu)
     drv.memcpy_dtoh(K, K_gpu)
-    print("Allocation done 21")
-    np.save(outfileprefix + "K.npy", K)
     if debug:
         K_test_features = np.asfarray([data[i] for i in feedback_indices], dtype=float_type)
         K_test = dist.cdist(K_test_features, K_test_features, 'cityblock') / n_features + np.diag(K_noise)
@@ -248,13 +215,10 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         check_result('K', K[:n_feedback, :n_feedback], K_test[:n_feedback, :n_feedback])
 
     K_inv = invert_K(n_feedback, n_feedback_padded, float_type, K_gpu, K_inv_gpu)
-    np.save(outfileprefix + "K_inv.npy", K_inv)
-    print("Allocation done 22")
 
     calc_K_x(cuda_module, block_size, n_feedback_padded, n_predict_padded, n_features, feedback_indices_gpu,
              predict_indices_gpu, data_gpu, K_x_gpu)
     drv.memcpy_dtoh(K_x, K_x_gpu)
-    np.save(outfileprefix + "K_x.npy", K_x)
     if debug:
         K_x_test = np.zeros((n_predict_padded, n_feedback_padded), dtype=float_type)
         for i, idx1 in enumerate(predict_indices):
@@ -263,23 +227,12 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
                 K_x_test[i][j] = vdist
         check_result('K_x', K_x[:n_predict, :n_feedback], K_x_test[:n_predict, :n_feedback])
 
-    np.save(outfileprefix + 'K_x.npy', K_x)
-    np.save(outfileprefix + 'K_inv.npy', K_inv)
-
     linalg.init()
-    print('K_x[0]')
-    print(K_x[0])
-    print('K_x[-1]')
-    print(K_x[-1])
     K_inv_gpuarr = gpuarray.to_gpu(K_inv.astype(float_type))
     K_x_gpuarr = gpuarray.to_gpu(K_x.astype(float_type))
     K_xK_gpu = linalg.dot(K_x_gpuarr, K_inv_gpuarr)
     K_xK = K_xK_gpu.get()
-    np.save(outfileprefix + 'K_xK.npy', K_xK)
 
-    print("Allocation done 23")
-    np.save(outfileprefix + "temp.npy", K_xK)
-    #calc_K_xK()
     if debug:
         #drv.memcpy_dtoh(K_xK, K_xK_gpu)
         K_xK_test = (np.matrix(K_x) * np.matrix(K_inv))
@@ -288,34 +241,19 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
 
     calc_K_xKK_x_T(cuda_module, block_size, n_feedback_padded, n_predict_padded, K_xK_gpu, K_x_gpu, diag_K_xKK_x_T_gpu)
     drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
-    np.save(outfileprefix + "diag.npy", diag_K_xKK_x_T)
-    print("Allocation done 24")
     drv.memcpy_dtoh(diag_K_xKK_x_T, diag_K_xKK_x_T_gpu)
-    np.save(outfileprefix + 'diag_K_xKK_x_T', diag_K_xKK_x_T)
     if debug:
         K_xKK_x_T_test = np.diag(np.matrix(K_xK) * np.matrix(K_x).T)
         check_result("K_xKK_x_T", diag_K_xKK_x_T, K_xKK_x_T_test)
 
-    print "diag_K_xx shape"
-    print diag_K_xx.shape
-    print diag_K_xx
-    print "diag_K_xKK_x_T shape"
-    print diag_K_xKK_x_T
-    print diag_K_xx[1] - diag_K_xKK_x_T[0][1]
     calc_variance(cuda_module, block_size, n_predict_padded, diag_K_xx_gpu, diag_K_xKK_x_T_gpu, variance_gpu)
     drv.memcpy_dtoh(variance, variance_gpu)
-    print("Allocation done 25")
     drv.memcpy_dtoh(variance, variance_gpu)
     if debug:
         variance_test = np.abs(np.subtract(diag_K_xx[:n_predict], diag_K_xKK_x_T[:, :n_predict]))
         check_result('Variance', variance[:, :n_predict], variance_test[:, :n_predict])
 
-    print('K_xK.shape:' ,np.shape(K_xK))
-    print('feedback.shape:', np.shape(feedback))
-    print('K_xK[0]', K_xK[0])
-    print('K_xK[-1]', K_xK[-1])
     mean = np.dot(K_xK, feedback)
-    print("Allocation done 26")
     if debug:
         #drv.memcpy_dtoh(mean, mean_gpu)
         mean_test = np.dot(K_xK, feedback)
@@ -350,19 +288,11 @@ def gaussian_process(data, feedback, feedback_indices, float_type=np.float32, in
         print('Mean differences (first 10):', np.subtract(mean.flatten()[:10], test_mean[:10]))
         print(mean.flatten()[:10])
         print(test_mean[:10])
-    print("Allocation done 27")
 
     # Write results to files for testing
     mean = mean.flatten()[:n_predict]
     variance = variance.flatten()[:n_predict]
-    print(mean)
-    print(variance)
-    outfile_mean = outfileprefix + 'mean.npy'
-    outfile_variance = outfileprefix + 'variance.npy'
-    print('Writing to files ' + outfile_mean + ' and ' + outfile_variance)
-    np.save(outfile_mean, mean)
-    np.save(outfile_variance, variance)
-
+    #print(time.time() - t)
     return mean, variance
 
 
@@ -427,6 +357,15 @@ def calc_UCB(cuda_module, block_size, n_predict_padded, mean_gpu, variance_gpu, 
     cuda_func = cuda_module.get_function("generate__UCB__")
     cuda_func(ucb_gpu, mean_gpu, variance_gpu, block=(block_size[0], 1, 1), grid=grid_size)
 
+def test():
+    for i in range(10):
+        feedback = np.load(str(i) + '_feedback.npy')
+        feedback_indices = np.load(str(i) + '_feedback_indices.npy')
+        K_diag_noise = np.load(str(i) + '_random_K.npy')
+        K_xx_noise = np.load(str(i) + '_random_K_xx.npy')
+
+        mean, variance = gaussian_process(data, feedback, feedback_indices, K_noise=K_diag_noise, K_xx_noise=K_xx_noise)
+
 
 if __name__ == "__main__":
     # Load image features
@@ -447,13 +386,8 @@ if __name__ == "__main__":
             exit()
 
         if sys.argv[1] == 'test':
-            print('sys.argv[1] == test')
-            for i in range(1):
-                feedback = np.load(str(i) + '_feedback.npy')
-                feedback_indices = np.load(str(i) + '_feedback_indices.npy')
-                K_diag_noise = np.load(str(i) + '_random_K.npy')
-                K_xx_noise = np.load(str(i) + '_random_K_xx.npy')
-                mean, variance = gaussian_process(data, feedback, feedback_indices, K_noise=K_diag_noise, K_xx_noise=K_xx_noise)
+            #print('sys.argv[1] == test')
+            test()
             exit()
 
     server = SimpleXMLRPCServer(("localhost", 8888))
