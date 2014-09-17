@@ -11,23 +11,65 @@
         
         <script>
             var rowHeight;
-            var imageDragged = null;
-            var draggedForward = false;
+            //var imageDragged = null;
+            //var draggedForward = false;
+            var imageBoxObj;
             var imgArray = [];
             
-            $(document).ready(function(){
-                rowHeight = parseFloat(($(window).height() * 90 / 100) / 5);
-                //console.log(rowHeight);
-                var imageBoxObj = new ImageBox();
-                imageBoxObj.createOuterContainer();
-                for (var i = 0; i < 29; i++){
+            var initialFillUp = true;
+            
+            function showImages(imageBoxObj, num){
+                numCurrentImages = $("img").length;
+                for (var i = 0; i < num; i++){
                     var imageBox = imageBoxObj.createImageBox();
                     imageBoxObj.outerContainer.append(imageBox);
-                    var imPath = '../images/im' + (i + 1) + '.jpg';
+                    var imPath = '../images/im' + (numCurrentImages + i + 1) + '.jpg';
                     imageBoxObj.loadImage(imPath, imageBox);
                     imageBoxObj.sliderArray[imageBoxObj.sliderArray.length - 1].initSlider();
                 }
+            }
+            
+            $(document).ready(function(){
+                rowHeight = parseFloat((($(window).height() - $(".navbar").height()) * 90 / 100) / 5);
+                //console.log(rowHeight);
+                imageBoxObj = new ImageBox();
+                imageBoxObj.createOuterContainer();
+                showImages(imageBoxObj, 30);
+                //showImages(imageBoxObj, 29);
                 
+                $(".wrapper").mouseenter(function(){
+                    //$(this).find(".btn-close").show();
+                    $(this).find(".slider-wrapper").show();
+                });
+                
+                $(".wrapper").mouseleave(function(){
+                    //$(this).find(".btn-close").hide();
+                    $(this).find(".slider-wrapper").hide();
+                });
+                
+                $("body").on("mouseup", function(event){
+                    if (sliderPressed === true){
+                        //$(activeSlider.roller).trigger("mouseup");
+                        activeSlider.releaseSlider();
+                    }
+                });
+                
+                $("body").on("mousemove", function(event){
+                    if (sliderPressed === true){
+                        activeSlider.dragSlider();
+                    }
+                });
+                
+                $(".wrapper").each(function(index, value){
+                    if (index > 15){
+                        $(value).find(".btn-close").hide();
+                    }
+                });
+                console.log($("img:eq(0)").height());
+                //$("img:eq(0)").height(rowHeight + 50);
+                $("img:eq(22)").parent().css("margin-left" , "50px").css("height", "30px");
+                
+                /*
                 $("body").on("mousedown", "img", function(event){
                     $(this).closest(".wrapper").addClass("border-glow");
                     $(this).closest(".wrapper").css("z-index", 2);
@@ -100,7 +142,7 @@
                             //imageBoxObj.outerContainer.append($(value));
                             
                             var imageBox = imageBoxObj.createImageBox();
-                            imageBox.append($(value).children().clone(true));
+                            imageBox.append($(value).children());
                             imageBoxObj.outerContainer.append(imageBox);
                             
                             //var imPath = $(value).find("img").attr("src");
@@ -134,17 +176,9 @@
                     }
                     return false;
                 });
-                /*
-                $(".wrapper").mouseenter(function(){
-                    $(this).find(".btn-close").show();
-                    $(this).find(".slider-wrapper").show();
-                });
-                
-                $(".wrapper").mouseleave(function(){
-                    $(this).find(".btn-close").hide();
-                    $(this).find(".slider-wrapper").hide();
-                });
                 */
+                
+                
                 //console.log(screen.availHeight);
                 //console.log($(window).height());
                 //console.log($(".outer-image-container").height());
@@ -154,7 +188,46 @@
     </head>
 
     <body>
-        
+        <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#">IMSE</a>
+            </div>
+            <div class="navbar-collapse collapse">
+            <!--
+              <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li class="dropdown">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <span class="caret"></span></a>
+                  <ul class="dropdown-menu" role="menu">
+                    <li><a href="#">Action</a></li>
+                    <li><a href="#">Another action</a></li>
+                    <li><a href="#">Something else here</a></li>
+                    <li class="divider"></li>
+                    <li class="dropdown-header">Nav header</li>
+                    <li><a href="#">Separated link</a></li>
+                    <li><a href="#">One more separated link</a></li>
+                  </ul>
+                </li>
+              </ul>
+            -->
+              <ul class="nav navbar-nav navbar-right">
+                <li><a href="#"><span class="glyphicon glyphicon-circle-arrow-left"></span></a></li>
+                <li><a id = 'id_page_no' href="#">1</a></li>
+                <li><a href="#"><span class="glyphicon glyphicon-circle-arrow-right"></span></a></li>
+                <li><a id = 'id_next' href="#">Next</a></li>
+              </ul>
+            </div><!--/.nav-collapse -->
+          </div>
+        </div>
     </body>
 
 </html>

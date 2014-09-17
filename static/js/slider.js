@@ -30,13 +30,15 @@ Slider.prototype.createSlider = function(){
     this.roller = $("<div></div>");
     this.roller.addClass("roller");
     this.axel.append(this.roller);
-    
+    //console.log(this.axel.height());
     return this.slider;
 }
 
 // Initialize slider
 Slider.prototype.initSlider = function(){
+    
     var rollerTopPosition = parseFloat((this.roller.height() - this.axel.height()) / 2);
+    //console.log(rollerTopPosition);
     this.rollerRadius = parseFloat(this.roller.width() / 2);
     this.roller.css("top", -rollerTopPosition);
     this.roller.css("left", -this.rollerRadius);

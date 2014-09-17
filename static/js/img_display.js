@@ -26,7 +26,7 @@ function setImagesToPlace(img){
 function displayImages(imageNo){
     var imageContainer = $("<div class='col-xs-12 col-md-12'></div>");
     imageContainer.addClass("image-container");
-    for (var i = 0; i < 8; i++){
+    for (var i = 0; i < 2; i++){
         imageContainer.append($("<div class = 'thumbnail'></div>"));
     }
     $(".container-fluid").append(imageContainer);

@@ -11,9 +11,13 @@ function ImageBox(){
     this.sliderArray = [];
 }
 ImageBox.prototype.createOuterContainer = function(){
-    this.outerContainer = $("<div></div>")
+    this.outerContainer = $("<div></div>");
+    var topOuterContainer = $(".navbar").height();
+    //console.log("Navbar height");
+    //console.log(topOuterContainer);
     this.outerContainer.addClass("outer-image-container");
     $("body").append(this.outerContainer);
+    this.outerContainer.css("margin-top", topOuterContainer);
     
 }
 ImageBox.prototype.createImageBox = function(){
@@ -24,7 +28,7 @@ ImageBox.prototype.createImageBox = function(){
     wrapper.addClass("wrapper");
     var imageBox = $("<div></div>");
     imageBox.addClass("thumbnail");
-    var closeButton = $("<div>x</div>");
+    var closeButton = $("<div>Accepted</div>");
     closeButton.addClass("btn-close");
     
     imageBox.append(closeButton);
@@ -36,7 +40,7 @@ ImageBox.prototype.createImageBox = function(){
     sliderWrapper.append(slider.createSlider());
     
     imageBox.append(sliderWrapper);
-    //sliderWrapper.hide();
+    sliderWrapper.hide();
     this.sliderArray.push(slider);
     wrapper.append(imageBox);
     this.imageBoxArray.push(wrapper);

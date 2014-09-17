@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="static/css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="static/css/slider.css">
+        <link rel="stylesheet" type="text/css" href="static/css/image-box.css">
+        <script type="text/javascript" src="static/js/jquery-1.11.1.js"></script>
+        <script type="text/javascript" src="static/js/bootstrap.js"></script>
+        <script type="text/javascript" src="static/js/slider.js"></script>
+        <script type="text/javascript" src="static/js/image-box.js"></script>
+        <style>
+            *{
+                margin: 0em;
+                padding: 0em;
+            }
+
+            body{
+                padding: 1em;
+                background-color: #FFF;
+            }
+            .wrapper{
+                border: 1px solid;
+                height: 5em;
+                position: relative;
+                margin-bottom: 3em;
+            }
+            .item{
+                //position: absolute;
+                float: left;
+                margin: 0.1em;
+                //clear: right;
+            }
+        </style>
+        <script>
+            var NO_OF_IMAGES_TO_SHOW = 120;
+            $(document).ready(function(){
+                var break_after = [];
+                function updateDivs(){
+                    var startDivPosition;
+                    var endDivPosition;
+                    alert("called")
+                    console.log(break_after)
+                    $.each(break_after, function(index, value){
+                        if(index === 0){
+                            startDivPosition = 0;
+                        }
+                        else{
+                            startDivPosition = break_after[index - 1];
+                        }
+                        endDivPosition = value;
+                        
+                        $("div").eq(value).css("margin-right", "0px");
+                        
+                        console.log("Start and end divs :: " + startDivPosition + "::" + endDivPosition)
+                        var lastDivInRow = $("div").eq(value);
+                        var spaceAvailable = ($(".wrapper").offset().left + $(".wrapper").width()) - (lastDivInRow.offset().left + lastDivInRow.width());
+                        console.log("Space Available :: " + spaceAvailable);
+                        //divToEnlarge.width(divToEnlarge.width() + spaceAvailable - 2);
+                        var dimIncreament = parseFloat(spaceAvailable / (endDivPosition - startDivPosition)) * 60 / 100;
+                        console.log("Increament per div :: " + dimIncreament);
+                        $(".wrapper div").slice(startDivPosition, endDivPosition - 1).each(function(){
+                            console.log("Current width :: " + $(this).css("margin-right"));
+                            $(this).css("margin-right", parseFloat($(this).css("margin-right").replace("px", "")) + dimIncreament + "px");
+                            //$(this).height($(this).height() + dimIncreament);
+                            console.log("Changed width :: " + $(this).css("margin-right"));
+                        });
+                    });
+                }
+                $("body").append("<div class = 'wrapper'></div>")
+                    for (var i = 0; i < NO_OF_IMAGES_TO_SHOW; i++){
+                        var div = $("<div></div>");
+                        div.css("height", "1em");
+                        div.css("width", Math.floor((Math.random() * 3) + 1) + "em");
+                        
+                        div.css("border", "1px");
+                        div.css("background-color", "red");
+                        div.addClass("item");
+                        $(".wrapper").append(div);
+                        if(i > 0 && (div.offset().top > div.prev().offset().top)){
+                            break_after.push(i - 1) ;
+                        }
+                        if(i === NO_OF_IMAGES_TO_SHOW - 1){
+                            //alert("calling")
+                            updateDivs();
+                        }
+                        
+                    }
+            });    
+        </script>
+    </head>
+
+    <body>
+        
+    </body>
+
+</html>

@@ -54,15 +54,15 @@ body{
 
 
 
-img{
-    //position: absolute;
+.navbar{
+    opacity: 0.3;
 }
 
 .outer-image-container{
     border: 0px solid;
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-around;
+    justify-content: flex-start;
     align-items: stretch;
     align-content: stretch;
     .wrapper{
@@ -85,12 +85,13 @@ img{
             position: relative;
             .btn-close{
                 background-color: #0066CC;
+                opacity: 0.5;
                 position: absolute;
                 //top: 0em;
                 //position: absolute;
-                padding: 0.2em;
-                line-height: 0.5em;
-                font-size: 1.2em;
+                padding: 0.3em;
+                //line-height: 0.5em;
+                font-size: 0.8em;
                 font-family: verdana;
                 color: $btn-close-colour;
                 border: 0px solid; 

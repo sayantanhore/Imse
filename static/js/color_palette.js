@@ -75,7 +75,7 @@ $(document).ready(function(){
         $(".color-palette").remove();
         currentImageSet = 1;
         $(".navbar-inverse").css("display", "block");
-        $(".container-fluid").css("padding", "5em");
+        $(".container-fluid").css("padding", "6em");
         displayImages(currentImageSet);
     });
     
