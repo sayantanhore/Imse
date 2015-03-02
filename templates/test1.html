@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<head>
+    <title>The Test Page</title>
+    
+    <link href='http://fonts.googleapis.com/css?family=Lato|Poiret+One|Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="../static/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/slider.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/justifiedGallery.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/color_palette.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/image_gallery.css">
+    
+    <style>
+        *{
+            margin: 0em;
+            padding: 0em;
+        }
+        body{
+            background-color: #0B3861;
+            //background-color: #084B8A;
+            
+        }
+        #container{
+            width: 100%;
+            height: 100%;
+            //border: 1px solid;
+            //margin: 0.1em;
+            background-color: #0B3861;
+            padding-bottom: 6px;
+        }
+        
+        
+        
+        #container img{
+            margin-right: 3px;
+            margin-top: 6px;
+        }
+        
+        
+        
+    </style>
+    
+    <script type="text/javascript" src="../static/js/jquery-1.11.1.js"></script>
+    <script type="text/javascript" lang="javascript">
+        
+        // Script
+        
+        var screenHeight = $(window).height();
+        var screenWidth = parseInt($(window).width() * 100) / 100;
+        
+        var marginWidth = 3;
+        var availableHeight = screenHeight;
+        var imageHeightFactor = 4.15;
+        totalNoOfImages = 36;
+        
+        var imagesInCurrentRow = [];
+        
+        var Images = [];
+        
+        function adjustRow(availableWidth, lastRow){
+            //alert("Adjusting");
+            var firstImageIndex = imagesInCurrentRow[0];
+            var lastImageIndex = imagesInCurrentRow[imagesInCurrentRow.length - 1];
+            console.log("Last Image :: " + lastImageIndex);
+            console.log($("img").eq(lastImageIndex).width());
+            if (lastRow == true){
+                $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
+                    $(this).css('margin-left', marginWidth + 'px')
+                    $(this).css('margin-bottom', marginWidth + 'px')
+                });
+            }
+            else{
+                var heightToApply = $("img").eq(lastImageIndex).height();
+                console.log(heightToApply);
+                $("img").slice(firstImageIndex, lastImageIndex).height(heightToApply);
+                var occupiedWidth = 0;
+                $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
+                    occupiedWidth += $(this).width();
+                });
+                console.log("Occupied width :: " + occupiedWidth);
+                console.log("Screen width :: " + screenWidth);
+                heightToIncrease = parseFloat((screenWidth - occupiedWidth - ((imagesInCurrentRow.length + 2) * marginWidth)) * heightToApply) / occupiedWidth;
+                $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
+                    //alert("Changing");
+                    heightToApply = $(this).height() + heightToIncrease;
+                    var w = $(this).width();
+                    var h = $(this).height();
+                    $(this).height(heightToApply);
+                    $(this).width(parseFloat(heightToApply * w) / h - marginWidth);
+                });
+                $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
+                    $(this).css('margin-left', marginWidth + 'px');
+                });
+                //$("img").eq(lastImageIndex).css('margin-right', 1 * marginWidth + 'px');
+            } 
+        }
+        
+        var setImageInPlace = function(containerHeight, containerWidth, availableWidth, index, images){
+            
+            imgPath = "../static/images/im" + images[index]+ ".jpg";
+            image = $('<img src = ' + imgPath + ' />');
+            
+            image.on('load', function(){
+                
+                console.log("Image :: " + $(this).attr('src'));
+                $(this).height(containerHeight / imageHeightFactor);
+                var imgHeight = $(this).height();
+                var imgWidth = $(this).width();
+                var imgTop = $(this).offset().top;
+                var imgLeft = $(this).offset().left;
+                
+                console.log("Height :: " + imgHeight);
+                console.log("Width :: " + imgWidth);
+                console.log("TOP :: " + $(this).offset().top);
+                console.log("Left :: " + $(this).offset().left);
+                
+                console.log("Availablewidth :: " + availableWidth);
+                
+                
+                if (availableWidth < (imgWidth + marginWidth)){
+                    if (availableWidth >= (Math.ceil(imgWidth * 0.65) + marginWidth)){
+                        $(this).width(availableWidth - marginWidth);
+                        console.log("Changed Width :: " + $(this).width());
+                        $(this).height(imgHeight * $(this).width() / imgWidth);
+                        console.log("Changed Height :: " + $(this).height());
+                        availableWidth -= ($(this).width() + marginWidth);
+                        imagesInCurrentRow.push(index);
+                    }
+                    else{
+                        $(this).css('margin-left', 2 * marginWidth + 'px');
+                        console.log("Current images :: " + imagesInCurrentRow);
+                        
+                        adjustRow(availableWidth, false);
+
+                        imagesInCurrentRow = [];
+                        imagesInCurrentRow.push(index);
+                        availableWidth = containerWidth - 2 * marginWidth;
+                        availableWidth -= ($(this).width() + marginWidth);
+                    }
+                    
+                }
+                else{
+                    if (index == 0){
+                        $(this).css('margin-left', 2 * marginWidth + 'px');
+                    }
+                    availableWidth -= ($(this).width() + marginWidth);
+                    imagesInCurrentRow.push(index);
+                }
+                
+                Images[index].placed = true;
+                if (index < images.length - 1){
+                    setImageInPlace(containerHeight, containerWidth, availableWidth, index + 1, images);
+                }
+                else if (index == images.length - 1){
+                    adjustRow(availableWidth, true);
+                }
+                
+            });
+            
+            $('#container').append(image);
+            
+        };
+        
+        $(document).ready(function(){
+            
+            
+            var containerHeight = screenHeight;
+            var containerWidth = $("#container").width();
+            var availableWidth = $("#container").width() - 2 * marginWidth;
+            
+            console.log(screenHeight + '::' + screenWidth);
+            var images = [];
+            for (var i = 1; i <= totalNoOfImages; i++){
+                images.push(i);
+                Images.push({
+                    placed: false
+                });
+            }
+            startIndex = 0;
+            setImageInPlace(containerHeight, containerWidth, availableWidth, startIndex, images);
+            
+        });
+        
+    </script>
+    
+</head>
+<body>
+    
+    <div id = 'container'>
+        
+    </div>
+    
+    
+    
+</body>
+
+</html>
