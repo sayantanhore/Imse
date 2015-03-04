@@ -11,21 +11,32 @@
     
     <style>
         *{
-            margin: 0em;
-            padding: 0em;
+            //margin: 0em;
+            //padding: 0em;
         }
         body{
             background-color: #0B3861;
             //background-color: #084B8A;
-            
         }
+        
+        #title{
+            width: 100%;
+            height: 7%;
+            background-color: #0066CC;
+            position: absolute;
+            opacity: 0.6;
+            display: block;
+        }
+        
         #container{
             width: 100%;
             height: 100%;
             //border: 1px solid;
             //margin: 0.1em;
             background-color: #0B3861;
+            //background-color: white;
             padding-bottom: 6px;
+            
         }
         
         
@@ -33,7 +44,7 @@
         #container img{
             margin-right: 3px;
             margin-top: 6px;
-            opacity: 0.0;
+            //opacity: 0.0;
         }
         
         
@@ -51,15 +62,15 @@
         
         var marginWidth = 3;
         var availableHeight = screenHeight;
-        var imageHeightFactor = 6.15;
-        totalNoOfImages = 36;
+        var imageHeightFactor = 3.15;
+        totalNoOfImages = 15;
         
         var imagesInCurrentRow = [];
         
         var Images = [];
         
         function adjustRow(availableWidth, lastRow){
-            //alert("Adjusting");
+            
             var firstImageIndex = imagesInCurrentRow[0];
             var lastImageIndex = imagesInCurrentRow[imagesInCurrentRow.length - 1];
             console.log("Last Image :: " + lastImageIndex);
@@ -74,6 +85,7 @@
                 var heightToApply = $("img").eq(lastImageIndex).height();
                 console.log(heightToApply);
                 $("img").slice(firstImageIndex, lastImageIndex).height(heightToApply);
+                
                 var occupiedWidth = 0;
                 $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
                     occupiedWidth += $(this).width();
@@ -89,9 +101,11 @@
                     $(this).height(heightToApply);
                     $(this).width(parseFloat(heightToApply * w) / h - marginWidth);
                 });
+                
                 $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
                     $(this).css('margin-left', marginWidth + 'px');
                 });
+                
                 //$("img").eq(lastImageIndex).css('margin-right', 1 * marginWidth + 'px');
             } 
         }
@@ -153,8 +167,15 @@
                     setImageInPlace(containerHeight, containerWidth, availableWidth, index + 1, images);
                 }
                 else if (index == images.length - 1){
-                    adjustRow(availableWidth, true);
+                    
+                    if (availableWidth > 0){
+                        adjustRow(availableWidth, true);
+                    }
+                    else{
+                        adjustRow(availableWidth, false);
+                    }
                 }
+                
                 $(this).velocity("fadeIn", {
                     duration: Math.ceil(Math.random() * 3000)
                 });
@@ -189,6 +210,8 @@
     
 </head>
 <body>
+    
+    
     
     <div id = 'container'>
         
