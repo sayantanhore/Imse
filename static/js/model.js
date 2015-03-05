@@ -5,6 +5,8 @@ var Image = function(imageIndex){
     this.imagePath = "../static/images/im" + imageIndex+ ".jpg";
     this.image = undefined;
     this.placed = false;
+    this.feedback = 0.0;
+    this.feedbackBox = undefined;
     
     this.loc = {
         top: -999,
@@ -20,6 +22,8 @@ var Image = function(imageIndex){
 Image.prototype.changeImage = function(imageIndex){
     this.imageIndex = imageIndex;
     this.imagePath = "../static/images/im" + imageIndex+ ".jpg";
+    this.feedback = 0.0;
+    this.feedbackBox = undefined;
     
     $("#container").empty();
     
@@ -27,3 +31,4 @@ Image.prototype.changeImage = function(imageIndex){
     availableWidth = $("#container").width() - 2 * marginWidth;
     setImageInPlace(containerHeight, containerWidth, availableWidth, startIndex);
 };
+

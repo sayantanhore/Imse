@@ -19,6 +19,7 @@ var totalNoOfImages = 13;
 var imagesInCurrentRow = [];
 
 var Images = [];
+var imageObjectOnFocus = undefined;
 
 var __EVENT_ID__ = 0;
 var __EVENTS__ = [];
@@ -97,8 +98,71 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
     var imgPath = Images[index].imagePath;
     var image = $('<img src = ' + imgPath + ' />');
     
+    image.on('mouseover', function(event){
+        var feedbackBox = $('<div class = "feedback-box"></div>');
+        var x = $(this).offset().left;
+        var y = $(this).offset().top;
+        
+        $("#container").append(feedbackBox);
+        var target = $(event.target);
+        
+        feedbackBox.css("left", x + 10 + "px");
+        feedbackBox.css("top", y + 10 + "px");
+        feedbackBox.css("background-color", "#DF3A01");
+        var imageIndex = undefined;
+        $.each(Images, function(index){
+            if (Images[index].image.attr('src') === target.attr('src')){
+                imageIndex = index;
+                imageObjectOnFocus = Images[index];
+                imageObjectOnFocus.feedbackBox = feedbackBox;
+                feedbackBox.html(imageObjectOnFocus.feedback);
+            }
+        });
+        event.stopPropagation();
+    });
+    
+    image.on('mouseout', function(event){
+        if (parseFloat(imageObjectOnFocus.feedback) == 0.0){
+            imageObjectOnFocus.feedbackBox.remove();
+            imageObjectOnFocus.feedbackBox = undefined;
+        }
+        event.stopPropagation();
+    });
+    
+    image.on('mousemove', function(event){
+        
+        var target = $(event.target);
+        
+        //imageObjectOnFocus.feedback = 0.1;
+        var mouse_x = event.pageX - target.offset().left;
+        //alert(mouse_x + ':::' + target.width() + ':::' + parseFloat(target.width()) / 10);
+        var feedbackVal = ((parseFloat(mouse_x) * 10.0 / (parseFloat(target.width())))).toFixed(1);
+        if (feedbackVal >= 0.0){
+            imageObjectOnFocus.feedbackBox.css("background-color", "#DF3A01");
+        }
+        if (feedbackVal >= 3.0){
+            imageObjectOnFocus.feedbackBox.css("background-color", "#DBA901");
+        }
+        if(feedbackVal >= 7.0){
+            imageObjectOnFocus.feedbackBox.css("background-color", "#01DFA5");
+        }
+        if (feedbackVal <= 0.0){
+            imageObjectOnFocus.feedbackBox.html(0.0);
+        }
+        else if(feedbackVal >= 10.0){
+            imageObjectOnFocus.feedbackBox.html(10.0);
+        }
+        else{
+            imageObjectOnFocus.feedbackBox.html(feedbackVal);
+        }
+        
+        
+    });
+    
     image.on('click', function(event){
         var target = $(event.target);
+        imageObjectOnFocus.feedback = parseFloat(imageObjectOnFocus.feedbackBox.html());
+        
         $.each(Images, function(index){
             //alert(target.attr('src'));
             if (Images[index].image.attr('src') === target.attr('src')){
@@ -111,7 +175,7 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
                 
             }
         });
-        
+        event.stopPropagation();
     });
     
     image.on('dimensionChanged', function(event, position){
@@ -187,11 +251,11 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
             }
             imagesInCurrentRow = [];
         }
-        /*
+        
         $(this).velocity("fadeIn", {
             duration: Math.ceil(Math.random() * 3000)
         });
-        */
+        
         Log(Date.now(), "Image " + index + " loaded");
     });
 
