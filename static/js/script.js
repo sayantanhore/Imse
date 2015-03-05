@@ -7,6 +7,11 @@ var screenHeight = $(window).height();
 var screenWidth = parseInt($(window).width() * 100) / 100;
 
 var marginWidth = 3;
+
+var containerHeight = 0;
+var containerWidth = 0;
+var availableWidth = 0;
+
 var availableHeight = screenHeight;
 var imageHeightFactor = 3.25;
 var totalNoOfImages = 13;
@@ -42,8 +47,9 @@ function adjustRow(availableWidth, lastRow){
         });
     }
     else{
+        
         var heightToApply = $("img").eq(lastImageIndex).height();
-        console.log(heightToApply);
+        
         $("img").slice(firstImageIndex, lastImageIndex).height(heightToApply);
 
         var occupiedWidth = 0;
@@ -85,27 +91,36 @@ function adjustRow(availableWidth, lastRow){
 // Place each image in a row based on available place left
 // ----------------------------------------------------------------------------------------------------------------------------------------
 
-var setImageInPlace = function(containerHeight, containerWidth, availableWidth, index, images){
+var setImageInPlace = function(containerHeight, containerWidth, availableWidth, index){
 
-    var imgPath = "../static/images/im" + images[index]+ ".jpg";
+    //var imgPath = "../static/images/im" + images[index]+ ".jpg";
+    var imgPath = Images[index].imagePath;
     var image = $('<img src = ' + imgPath + ' />');
     
     image.on('click', function(event){
         var target = $(event.target);
-        alert(_.indexOf(Images, target))
+        $.each(Images, function(index){
+            //alert(target.attr('src'));
+            if (Images[index].image.attr('src') === target.attr('src')){
+                //alert(true);
+                var newImageIndex = -999;
+                do{
+                    newImageIndex = Math.ceil(Math.random() * 100);
+                }while(newImageIndex < totalNoOfImages);
+                Images[index].changeImage(newImageIndex);
+                
+            }
+        });
         
     });
     
     image.on('dimensionChanged', function(event, position){
-        //alert("Fired");
-        //alert($(event.target).height());
-        var target = $(event.target)
-        Images[position].image = target;
-        Images[position].height = target.height();
-        Images[position].width = target.width();
-        Images[position].top = target.offset().top;
-        Images[position].left = target.offset().left;
-        console.log(' :Height: ' + Images[position].height + ' :Top: ' + Images[position].top + ' :Width: ' + Images[position].width + ' :Left: ' + Images[position].left);
+        var target = $(event.target);
+        Images[position].dim.height = target.height();
+        Images[position].dim.width = target.width();
+        Images[position].loc.top = target.offset().top;
+        Images[position].loc.left = target.offset().left;
+        console.log(' :Height: ' + Images[position].dim.height + ' :Top: ' + Images[position].loc.top + ' :Width: ' + Images[position].dim.width + ' :Left: ' + Images[position].loc.left);
     });
     image.on('load', function(){
 
@@ -153,12 +168,16 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
             availableWidth -= ($(this).width() + marginWidth);
             imagesInCurrentRow.push(index);
         }
-
+        
+        // Update model
+        
+        Images[index].image = $(this);
         Images[index].placed = true;
-        if (index < images.length - 1){
-            setImageInPlace(containerHeight, containerWidth, availableWidth, index + 1, images);
+        
+        if (index < Images.length - 1){
+            setImageInPlace(containerHeight, containerWidth, availableWidth, index + 1);
         }
-        else if (index == images.length - 1){
+        else if (index == Images.length - 1){
 
             if (availableWidth > 0){
                 adjustRow(availableWidth, true);
@@ -166,13 +185,13 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
             else{
                 adjustRow(availableWidth, false);
             }
-            
+            imagesInCurrentRow = [];
         }
-
+        /*
         $(this).velocity("fadeIn", {
             duration: Math.ceil(Math.random() * 3000)
         });
-        
+        */
         Log(Date.now(), "Image " + index + " loaded");
     });
 
@@ -185,9 +204,9 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
 
 $(document).ready(function(){
 
-    var containerHeight = screenHeight;
-    var containerWidth = $("#container").width();
-    var availableWidth = $("#container").width() - 2 * marginWidth;
+    containerHeight = screenHeight;
+    containerWidth = $("#container").width();
+    availableWidth = $("#container").width() - 2 * marginWidth;
 
     console.log(screenHeight + '::' + screenWidth);
     var images = [];
@@ -195,14 +214,21 @@ $(document).ready(function(){
         images.push(i);
     }
     $.each(images, function(index, value){
+        /*
         Images.push({
             imageIndex: value,
             placed: false
         });
+        */
+        
+        var currentImage = new Image(images[index]);
+        //currentImage.imageIndex = index;
+        //currentImage.imagePath = "../static/images/im" + images[index]+ ".jpg";
+        Images.push(currentImage);
     });
     
     var startIndex = 0;
-    setImageInPlace(containerHeight, containerWidth, availableWidth, startIndex, images);
+    setImageInPlace(containerHeight, containerWidth, availableWidth, startIndex);
     
     
     
