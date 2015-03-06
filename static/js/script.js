@@ -89,6 +89,19 @@ function adjustRow(availableWidth, lastRow){
     });
 }
 
+$(document).on("scroll", function(){
+    scrollHandler(imageObjectOnFocus);
+});
+
+// Initiate FeedbackBox
+// ----------------------------------------------------------------------------------------------------------------------------------------
+
+var initiateFeedbackBox = function(feedbackBox, target){
+    feedbackBox.css("left", target.offset().left - document.body.scrollLeft + 10 + "px");
+    feedbackBox.css("top", target.offset().top - document.body.scrollTop + 10 + "px");
+    feedbackBox.css("background-color", "#DF3A01");
+}
+
 // Place each image in a row based on available place left
 // ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -99,16 +112,15 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
     var image = $('<img src = ' + imgPath + ' />');
     
     image.on('mouseover', function(event){
-        var feedbackBox = $('<div class = "feedback-box"></div>');
-        var x = $(this).offset().left;
-        var y = $(this).offset().top;
-        
-        $("#container").append(feedbackBox);
         var target = $(event.target);
+        var feedbackBox = $('<div class = "feedback-box"></div>');
+
+        $("#container").append(feedbackBox);
         
-        feedbackBox.css("left", x + 10 + "px");
-        feedbackBox.css("top", y + 10 + "px");
-        feedbackBox.css("background-color", "#DF3A01");
+        initiateFeedbackBox(feedbackBox, target);
+        
+        
+        
         var imageIndex = undefined;
         $.each(Images, function(index){
             if (Images[index].image.attr('src') === target.attr('src')){
@@ -132,8 +144,6 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
     image.on('mousemove', function(event){
         
         var target = $(event.target);
-        
-        //imageObjectOnFocus.feedback = 0.1;
         var mouse_x = event.pageX - target.offset().left;
         //alert(mouse_x + ':::' + target.width() + ':::' + parseFloat(target.width()) / 10);
         var feedbackVal = ((parseFloat(mouse_x) * 10.0 / (parseFloat(target.width())))).toFixed(1);

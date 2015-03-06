@@ -35,6 +35,16 @@ function Log(timestamp, description){
     __EVENTS__.push([__EVENT_ID__, timestamp, description]);
 }
 
+function scrollHandler(){
+    console.log("Scrolling :: " + document.body.scrollTop);
+    if ((imageObjectOnFocus !== undefined) && (imageObjectOnFocus.feedbackBox !== undefined)){
+        var top = imageObjectOnFocus.image.offset().top - document.body.scrollTop + 10;
+        var left = imageObjectOnFocus.image.offset().left - document.body.scrollLeft + 10;
+        imageObjectOnFocus.feedbackBox.css("top", top + "px");
+        imageObjectOnFocus.feedbackBox.css("left", left + "px");
+    }
+}
+
 function recordEventsToFile()
 {
     var csvData = Papa.unparse({
