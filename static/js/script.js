@@ -14,7 +14,7 @@ var availableWidth = 0;
 
 var availableHeight = screenHeight;
 var imageHeightFactor = 3.25;
-var totalNoOfImages = 6;
+var totalNoOfImages = 12;
 
 var imagesInCurrentRow = [];
 
@@ -28,89 +28,7 @@ var __EVENTS__ = [];
 // Update each image onchange location and dimension
 // ----------------------------------------------------------------------------------------------------------------------------------------
 
-function updateImage(){
-    
-}
-
-// Adjust each row after the last image is placed
-// ----------------------------------------------------------------------------------------------------------------------------------------
-
-function adjustRow(availableWidth, lastRow){
-
-    var firstImageIndex = imagesInCurrentRow[0];
-    var lastImageIndex = imagesInCurrentRow[imagesInCurrentRow.length - 1];
-    console.log("Last Image :: " + lastImageIndex);
-    console.log($("img").eq(lastImageIndex).width());
-    if (lastRow == true){
-        $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
-            $(this).css('margin-left', marginWidth + 'px')
-            $(this).css('margin-bottom', marginWidth + 'px')
-        });
-    }
-    else{
-        
-        var heightToApply = $("img").eq(lastImageIndex).height();
-        
-        $("img").slice(firstImageIndex, lastImageIndex).height(heightToApply);
-
-        var occupiedWidth = 0;
-        $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
-            occupiedWidth += $(this).width();
-        });
-        console.log("Occupied width :: " + occupiedWidth);
-        console.log("Screen width :: " + screenWidth);
-        var heightToIncrease = parseFloat((screenWidth - occupiedWidth - ((imagesInCurrentRow.length + 2) * marginWidth)) * heightToApply) / occupiedWidth;
-        $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
-            //alert("Changing");
-            heightToApply = $(this).height() + heightToIncrease;
-            var w = $(this).width();
-            var h = $(this).height();
-            $(this).height(heightToApply);
-            $(this).width(parseFloat(heightToApply * w) / h - marginWidth);
-        });
-
-        $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
-            $(this).css('margin-left', marginWidth + 'px');
-        });
-
-        //$("img").eq(lastImageIndex).css('margin-right', 1 * marginWidth + 'px');
-        
-    }
-    $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(index){
-        console.log(Images[firstImageIndex + index].imageIndex);
-        /*
-        Images[index].height = $(this).height();
-        Images[index].width = $(this).width();
-        Images[index].top = $(this).offset().top;
-        Images[index].left = $(this).offset().left;
-        */
-        $(this).trigger('dimensionChanged', firstImageIndex + index);
-        
-    });
-}
-
-$(document).on("scroll", function(){
-    scrollHandler(imageObjectOnFocus);
-});
-
-// Initiate FeedbackBox
-// ----------------------------------------------------------------------------------------------------------------------------------------
-
-var initiateFeedbackBox = function(feedbackBox, target){
-    feedbackBox.css("left", target.offset().left - document.body.scrollLeft + 10 + "px");
-    feedbackBox.css("top", target.offset().top - document.body.scrollTop + 10 + "px");
-    feedbackBox.css("background-color", "#DF3A01");
-}
-
-// Place each image in a row based on available place left
-// ----------------------------------------------------------------------------------------------------------------------------------------
-
-var setImageInPlace = function(containerHeight, containerWidth, availableWidth, index){
-
-    //var imgPath = "../static/images/im" + images[index]+ ".jpg";
-    var imgPath = Images[index].imagePath;
-    var image = $('<img src = ' + imgPath + ' />');
-    
+function attachListenersToImages(image){
     image.on('mouseover', function(event){
         var target = $(event.target);
         var feedbackBox = $('<div class = "feedback-box"></div>');
@@ -197,6 +115,88 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
         Images[position].loc.left = target.offset().left;
         console.log(' :Height: ' + Images[position].dim.height + ' :Top: ' + Images[position].loc.top + ' :Width: ' + Images[position].dim.width + ' :Left: ' + Images[position].loc.left);
     });
+}
+
+// Adjust each row after the last image is placed
+// ----------------------------------------------------------------------------------------------------------------------------------------
+
+function adjustRow(availableWidth, lastRow){
+
+    var firstImageIndex = imagesInCurrentRow[0];
+    var lastImageIndex = imagesInCurrentRow[imagesInCurrentRow.length - 1];
+    console.log("Last Image :: " + lastImageIndex);
+    console.log($("img").eq(lastImageIndex).width());
+    if (lastRow == true){
+        $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
+            $(this).css('margin-left', marginWidth + 'px')
+            $(this).css('margin-bottom', marginWidth + 'px')
+        });
+    }
+    else{
+        
+        var heightToApply = $("img").eq(lastImageIndex).height();
+        
+        $("img").slice(firstImageIndex, lastImageIndex).height(heightToApply);
+
+        var occupiedWidth = 0;
+        $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
+            occupiedWidth += $(this).width();
+        });
+        console.log("Occupied width :: " + occupiedWidth);
+        console.log("Screen width :: " + screenWidth);
+        var heightToIncrease = parseFloat((screenWidth - occupiedWidth - ((imagesInCurrentRow.length + 2) * marginWidth)) * heightToApply) / occupiedWidth;
+        $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(){
+            //alert("Changing");
+            heightToApply = $(this).height() + heightToIncrease;
+            var w = $(this).width();
+            var h = $(this).height();
+            $(this).height(heightToApply);
+            $(this).width(parseFloat(heightToApply * w) / h - marginWidth);
+        });
+
+        $("img").slice(firstImageIndex + 1, lastImageIndex + 1).each(function(){
+            $(this).css('margin-left', marginWidth + 'px');
+        });
+
+        //$("img").eq(lastImageIndex).css('margin-right', 1 * marginWidth + 'px');
+        
+    }
+    $("img").slice(firstImageIndex, lastImageIndex + 1).each(function(index){
+        console.log(Images[firstImageIndex + index].imageIndex);
+        /*
+        Images[index].height = $(this).height();
+        Images[index].width = $(this).width();
+        Images[index].top = $(this).offset().top;
+        Images[index].left = $(this).offset().left;
+        */
+        $(this).trigger('dimensionChanged', firstImageIndex + index);
+        
+    });
+}
+
+$(document).on("scroll", function(){
+    scrollHandler(imageObjectOnFocus);
+});
+
+// Initiate FeedbackBox
+// ----------------------------------------------------------------------------------------------------------------------------------------
+
+var initiateFeedbackBox = function(feedbackBox, target){
+    feedbackBox.css("left", target.offset().left - document.body.scrollLeft + 10 + "px");
+    feedbackBox.css("top", target.offset().top - document.body.scrollTop + 10 + "px");
+    feedbackBox.css("background-color", "#DF3A01");
+}
+
+// Place each image in a row based on available place left
+// ----------------------------------------------------------------------------------------------------------------------------------------
+
+var setImageInPlace = function(containerHeight, containerWidth, availableWidth, index){
+
+    //var imgPath = "../static/images/im" + images[index]+ ".jpg";
+    var imgPath = Images[index].imagePath;
+    var image = $('<img src = ' + imgPath + ' />');
+    
+    
     image.on('load', function(){
 
         console.log("Image :: " + $(this).attr('src'));
@@ -266,6 +266,8 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
         $(this).velocity("fadeIn", {
             duration: Math.ceil(Math.random() * 3000)
         });
+        
+        attachListenersToImages($(this));
         
         Log(Date.now(), "N/A", index, "Image loaded");
     });
