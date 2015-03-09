@@ -14,7 +14,7 @@ var availableWidth = 0;
 
 var availableHeight = screenHeight;
 var imageHeightFactor = 3.25;
-var totalNoOfImages = 13;
+var totalNoOfImages = 6;
 
 var imagesInCurrentRow = [];
 
@@ -181,6 +181,7 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
                 do{
                     newImageIndex = Math.ceil(Math.random() * 100);
                 }while(newImageIndex < totalNoOfImages);
+                Log(Date.now(), event.pageX + "-" + event.pageY, Images[index].imageIndex, "Image clicked");
                 Images[index].changeImage(newImageIndex);
                 
             }
@@ -266,7 +267,7 @@ var setImageInPlace = function(containerHeight, containerWidth, availableWidth, 
             duration: Math.ceil(Math.random() * 3000)
         });
         
-        Log(Date.now(), "Image " + index + " loaded");
+        Log(Date.now(), "N/A", index, "Image loaded");
     });
 
     $('#container').append(image);
@@ -310,6 +311,7 @@ $(document).ready(function(){
     // -----------------------------------------
     
     $('#done').on('click', function(){
+        Log(Date.now(), "N/A", "N/A", "Done clicked");
         recordEventsToFile();
     });
 

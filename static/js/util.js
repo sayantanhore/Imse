@@ -30,9 +30,9 @@ function saveTextAsFile()
 
 // Write log
 // ----------------------------------------------------------------------------------------------------------------------------------------
-function Log(timestamp, description){
+function Log(timestamp, mouseLoc, imageIndex, description){
     __EVENT_ID__ +=1;
-    __EVENTS__.push([__EVENT_ID__, timestamp, description]);
+    __EVENTS__.push([__EVENT_ID__, timestamp, mouseLoc, imageIndex, description]);
 }
 
 function scrollHandler(){
@@ -48,7 +48,7 @@ function scrollHandler(){
 function recordEventsToFile()
 {
     var csvData = Papa.unparse({
-        fields: ['Event ID', 'Timestamp', 'Description'],
+        fields: ['Event ID', 'Timestamp', 'Description', 'Mouse(X-Y)', 'Image Index', 'Event Description'],
         data: __EVENTS__
     });
     alert(csvData);
@@ -76,6 +76,7 @@ function recordEventsToFile()
 	}
 
 	downloadLink.click();
+    __EVENTS__ = [];
 }
 
 function destroyClickedElement(event)
