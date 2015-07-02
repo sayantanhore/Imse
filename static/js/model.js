@@ -1,12 +1,13 @@
 "use strict";
 
-var Image = function(imageIndex){
+var Image = function(imageIndex, parent){
     this.imageIndex = imageIndex;
+    this.parent = parent;
     this.imagePath = "../static/images/im" + imageIndex+ ".jpg";
-    this.image = undefined;
+    this.image = null;
     this.placed = false;
     this.feedback = 0.0;
-    this.feedbackBox = undefined;
+    this.feedbackBox = null;
     
     this.loc = {
         top: -999,
@@ -22,13 +23,14 @@ var Image = function(imageIndex){
 Image.prototype.changeImage = function(imageIndex){
     this.imageIndex = imageIndex;
     this.imagePath = "../static/images/im" + imageIndex+ ".jpg";
-    this.feedback = 0.0;
-    this.feedbackBox = undefined;
+    //this.feedback = 0.0;
+    this.feedbackBox.html(this.feedback);
     
-    $("#container").empty();
+    this.image.remove();
+    this.image = $("<img/>").attr("src", this.imagePath);
+    this.image.on("load", loadImage);
+    this.parent.append(this.image);
     
-    var startIndex = 0;
-    availableWidth = $("#container").width() - 2 * marginWidth;
-    setImageInPlace(containerHeight, containerWidth, availableWidth, startIndex);
+    
 };
 
