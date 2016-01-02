@@ -1,0 +1,40 @@
+Install a fresh copy of Ubuntu
+
+Update distribution
+sudo apt-get update
+sudo apt-get upgrade
+
+Remove and purge ubuntu video drivers
+
+Install NVIDIA drivers
+sudo apt-get install nvidia-current
+sudo apt-get install nvidia-current-update
+
+Install CUDA and CUDA Toolkit (standard procedure)
+
+Include /usr/local/cuda/bin in path
+Set LD_LIBRARY_PATH /usr/local/cuda/lib64
+
+Install Apache2
+
+Install ANACONDA (It is recommended, you may opt for individual installation of packages)
+Using:
+http://uoa-eresearch.github.io/eresearch-cookbook/recipe/2014/11/20/conda/
+Create a virtual environment using conda command inside anaconda2/envs
+conda create -n image_search python=x.x anaconda
+Activate venv image_search
+source activate image_search
+
+Install Django and mod_wsgi (Google for instructions)
+
+Create an entry for VirtualHost wonders.pc.hiit.fi in /etc/hosts
+Create a file wonders.pc.hiit.fi.conf inside /etc/apache2/sites-available
+
+Enable the virtual host by
+sudo a2ensite wonders.pc.hiit.fi
+(Remember do not use .conf extension in this command, this command basically makes a symlink of this file inside /etc/apache2/sites-enabled)
+
+Create a file Imse.wsgi inside conf directory under /ldata/Imse
+(All configuration files like settings.py, localsettings.py, urls.py sits here)
+Put all the required configuration here (refer to the Imse.wsgi file in the system)
+

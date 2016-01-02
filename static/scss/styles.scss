@@ -1,0 +1,71 @@
+$contentMargin: 0.5em;
+$contentColour: #084B8A;
+$bodyColour: #0B3861;
+$feedbackBoxColour: #DF3A01;
+$imageBoxMargin: 0.5em;
+$menuFontSize: 0.8em;
+$menuHeight: 1.5em;
+
+* {
+    margin: 0em;
+    padding: 0em;
+    font-family: 'Gruppo', cursive;
+}
+
+::-webkit-scrollbar {
+    width: 0em;  
+}
+
+body{
+    background-color: $bodyColour;
+    div#menubar{
+        margin-left: $contentMargin;
+        margin-right: $contentMargin;
+        text-align: right;
+        font-weight: 500;
+        min-height: $menuHeight;
+        line-height: $menuHeight;
+        display: block;
+        background-color: $contentColour;
+        span{
+            font-size: $menuFontSize;
+            padding: $contentMargin;
+            color: white;
+        }
+    }
+    div#container{
+        margin: $contentMargin;
+        div#gallery{
+            width: 100%;
+            border: 0px solid;
+            overflow: auto;
+            
+            .image-box{
+                float: left;
+                border: 0px solid;
+                margin-right: $contentMargin;
+                margin-bottom: $contentMargin;
+                position: relative;
+                float: left;
+                .feedback-box{
+                    position: absolute;
+                    z-index: 2;
+                    border-radius: 100%;
+                    
+                    margin-left: 0.8em;
+                    margin-top: 0.8em;
+                    
+                    color: #FFFFFF;
+                    background-color: $feedbackBoxColour;
+                    opacity: 0.0;
+                    box-shadow: 0 0 5px 6px rgba(0,0,0,.35);
+                    width: 2.5em;
+                    text-align: center;
+                    height: 2.5em;
+                    line-height: 2.5em;
+                }
+            }
+        }
+    }
+}
+
